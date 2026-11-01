@@ -1,0 +1,26 @@
+{
+  "name": "HttpBinary",
+  "properties": {
+    "linkedServiceName": {
+      "referenceName": "Http",
+      "type": "LinkedServiceReference",
+      "parameters": {
+        "url": {
+          "value": "@dataset().url",
+          "type": "Expression"
+        }
+      }
+    },
+    "parameters": {
+      "url": {
+        "type": "String"
+      }
+    },
+    "type": "Binary",
+    "typeProperties": {
+      "location": {
+        "type": "HttpServerLocation"
+      }
+    }
+  }
+}

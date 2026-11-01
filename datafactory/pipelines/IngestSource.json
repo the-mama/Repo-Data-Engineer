@@ -1,0 +1,242 @@
+{
+  "name": "IngestSource",
+  "properties": {
+    "parameters": {
+      "config": {
+        "type": "Object"
+      },
+      "batch_id": {
+        "type": "String"
+      },
+      "database_prefix": {
+        "type": "String",
+        "defaultValue": "mobility_dev"
+      },
+      "storage": {
+        "type": "String",
+        "defaultValue": "dltmprojects"
+      }
+    },
+    "variables": {
+      "headers": {
+        "type": "String",
+        "defaultValue": ""
+      }
+    },
+    "activities": [
+      {
+        "name": "OptionalSecret",
+        "type": "IfCondition",
+        "dependsOn": [],
+        "typeProperties": {
+          "expression": {
+            "value": "@not(empty(pipeline().parameters.config.key_vault_secret_name))",
+            "type": "Expression"
+          },
+          "ifTrueActivities": [
+            {
+              "name": "FetchSecret",
+              "type": "WebActivity",
+              "dependsOn": [],
+              "typeProperties": {
+                "method": "GET",
+                "url": {
+                  "value": "@concat('https://configure.vault.azure.net/secrets/',pipeline().parameters.config.key_vault_secret_name,'?api-version=7.4')",
+                  "type": "Expression"
+                },
+                "authentication": {
+                  "type": "MSI",
+                  "resource": "https://vault.azure.net"
+                }
+              },
+              "policy": {
+                "timeout": "0.01:00:00",
+                "retry": 3,
+                "retryIntervalInSeconds": 30,
+                "secureInput": true,
+                "secureOutput": true
+              }
+            },
+            {
+              "name": "SetHeaders",
+              "type": "SetVariable",
+              "dependsOn": [
+                {
+                  "activity": "FetchSecret",
+                  "dependencyConditions": [
+                    "Succeeded"
+                  ]
+                }
+              ],
+              "typeProperties": {
+                "variableName": "headers",
+                "value": {
+                  "value": "@activity('FetchSecret').output.value",
+                  "type": "Expression"
+                }
+              },
+              "policy": {
+                "secureInput": true,
+                "secureOutput": true
+              }
+            }
+          ]
+        }
+      },
+      {
+        "name": "CopyResponse",
+        "type": "Copy",
+        "dependsOn": [
+          {
+            "activity": "OptionalSecret",
+            "dependencyConditions": [
+              "Succeeded"
+            ]
+          }
+        ],
+        "typeProperties": {
+          "source": {
+            "type": "BinarySource",
+            "storeSettings": {
+              "type": "HttpReadSettings",
+              "requestMethod": "GET",
+              "additionalHeaders": {
+                "value": "@variables('headers')",
+                "type": "Expression"
+              },
+              "requestTimeout": "00:05:00"
+            }
+          },
+          "sink": {
+            "type": "BinarySink",
+            "storeSettings": {
+              "type": "AzureBlobFSWriteSettings"
+            }
+          }
+        },
+        "policy": {
+          "timeout": "0.01:00:00",
+          "retry": 0,
+          "retryIntervalInSeconds": 30,
+          "secureInput": true,
+          "secureOutput": true
+        },
+        "inputs": [
+          {
+            "referenceName": "HttpBinary",
+            "type": "DatasetReference",
+            "parameters": {
+              "url": {
+                "value": "@pipeline().parameters.config.api_url",
+                "type": "Expression"
+              }
+            }
+          }
+        ],
+        "outputs": [
+          {
+            "referenceName": "LandingBinary",
+            "type": "DatasetReference",
+            "parameters": {
+              "folder": {
+                "value": "@concat(pipeline().parameters.database_prefix, '/', pipeline().parameters.config.target_folder, '/', pipeline().parameters.batch_id)",
+                "type": "Expression"
+              },
+              "file": "response.bin"
+            }
+          }
+        ]
+      },
+      {
+        "name": "TransformSource",
+        "type": "ExecutePipeline",
+        "dependsOn": [
+          {
+            "activity": "CopyResponse",
+            "dependencyConditions": [
+              "Succeeded"
+            ]
+          }
+        ],
+        "typeProperties": {
+          "pipeline": {
+            "referenceName": "TransformSource",
+            "type": "PipelineReference"
+          },
+          "waitOnCompletion": true,
+          "parameters": {
+            "config": {
+              "value": "@pipeline().parameters.config",
+              "type": "Expression"
+            },
+            "batch_id": {
+              "value": "@pipeline().parameters.batch_id",
+              "type": "Expression"
+            },
+            "database_prefix": {
+              "value": "@pipeline().parameters.database_prefix",
+              "type": "Expression"
+            },
+            "storage": {
+              "value": "@pipeline().parameters.storage",
+              "type": "Expression"
+            },
+            "landing_file": {
+              "value": "@concat('abfss://landing@', pipeline().parameters.storage, '.dfs.core.windows.net/',pipeline().parameters.database_prefix,'/',pipeline().parameters.config.target_folder,'/',pipeline().parameters.batch_id,'/response.bin')",
+              "type": "Expression"
+            }
+          }
+        }
+      },
+      {
+        "name": "CommitWatermark",
+        "type": "SqlServerStoredProcedure",
+        "dependsOn": [
+          {
+            "activity": "TransformSource",
+            "dependencyConditions": [
+              "Succeeded"
+            ]
+          }
+        ],
+        "typeProperties": {
+          "storedProcedureName": "dbo.mark_source_success",
+          "storedProcedureParameters": {
+            "source_name": {
+              "value": {
+                "value": "@pipeline().parameters.config.source_name",
+                "type": "Expression"
+              },
+              "type": "String"
+            },
+            "entity_name": {
+              "value": {
+                "value": "@pipeline().parameters.config.entity_name",
+                "type": "Expression"
+              },
+              "type": "String"
+            },
+            "watermark": {
+              "value": {
+                "value": "@if(equals(pipeline().parameters.config.weather_kind,'historical'),formatDateTime(addDays(utcNow(),-2),'yyyy-MM-dd'),utcNow())",
+                "type": "Expression"
+              },
+              "type": "String"
+            }
+          }
+        },
+        "linkedServiceName": {
+          "referenceName": "ControlSql",
+          "type": "LinkedServiceReference"
+        },
+        "policy": {
+          "timeout": "0.01:00:00",
+          "retry": 3,
+          "retryIntervalInSeconds": 30,
+          "secureInput": true,
+          "secureOutput": true
+        }
+      }
+    ]
+  }
+}

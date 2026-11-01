@@ -1,0 +1,2 @@
+# Synapse supplies PySpark, Delta and protobuf; do not override the runtime.
+gtfs-realtime-bindings==2.2.0

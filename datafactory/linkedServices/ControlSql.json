@@ -1,0 +1,13 @@
+{
+  "name": "ControlSql",
+  "properties": {
+    "type": "AzureSqlDatabase",
+    "typeProperties": {
+      "server": "configure.database.windows.net",
+      "database": "mobility_control",
+      "authenticationType": "SystemAssignedManagedIdentity",
+      "encrypt": "mandatory",
+      "trustServerCertificate": false
+    }
+  }
+}

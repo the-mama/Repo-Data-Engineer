@@ -1,0 +1,194 @@
+{
+  "name": "TransformSource",
+  "properties": {
+    "parameters": {
+      "config": {
+        "type": "Object"
+      },
+      "batch_id": {
+        "type": "String"
+      },
+      "database_prefix": {
+        "type": "String",
+        "defaultValue": "mobility_dev"
+      },
+      "storage": {
+        "type": "String",
+        "defaultValue": "dltmprojects"
+      },
+      "landing_file": {
+        "type": "String"
+      }
+    },
+    "activities": [
+      {
+        "name": "WriteBronze",
+        "type": "SynapseNotebook",
+        "dependsOn": [],
+        "typeProperties": {
+          "notebook": {
+            "referenceName": {
+              "value": "mobility_bronze",
+              "type": "Expression"
+            },
+            "type": "NotebookReference"
+          },
+          "sparkPool": {
+            "referenceName": {
+              "value": "mobilityspark",
+              "type": "Expression"
+            },
+            "type": "BigDataPoolReference"
+          },
+          "parameters": {
+            "database_prefix": {
+              "value": {
+                "value": "@pipeline().parameters.database_prefix",
+                "type": "Expression"
+              },
+              "type": "string"
+            },
+            "landing_file": {
+              "value": {
+                "value": "@pipeline().parameters.landing_file",
+                "type": "Expression"
+              },
+              "type": "string"
+            },
+            "batch_id": {
+              "value": {
+                "value": "@pipeline().parameters.batch_id",
+                "type": "Expression"
+              },
+              "type": "string"
+            },
+            "source": {
+              "value": {
+                "value": "@pipeline().parameters.config.source_name",
+                "type": "Expression"
+              },
+              "type": "string"
+            },
+            "source_url": {
+              "value": {
+                "value": "@pipeline().parameters.config.api_url",
+                "type": "Expression"
+              },
+              "type": "string"
+            },
+            "entity": {
+              "value": {
+                "value": "@pipeline().parameters.config.entity_name",
+                "type": "Expression"
+              },
+              "type": "string"
+            },
+            "content_format": {
+              "value": {
+                "value": "@pipeline().parameters.config.content_format",
+                "type": "Expression"
+              },
+              "type": "string"
+            },
+            "weather_kind": {
+              "value": {
+                "value": "@pipeline().parameters.config.weather_kind",
+                "type": "Expression"
+              },
+              "type": "string"
+            },
+            "storage": {
+              "value": {
+                "value": "@pipeline().parameters.storage",
+                "type": "Expression"
+              },
+              "type": "string"
+            }
+          },
+          "snapshot": true
+        },
+        "linkedServiceName": {
+          "referenceName": "Synapse",
+          "type": "LinkedServiceReference"
+        },
+        "policy": {
+          "timeout": "0.01:00:00",
+          "retry": 3,
+          "retryIntervalInSeconds": 30,
+          "secureInput": true,
+          "secureOutput": true
+        }
+      },
+      {
+        "name": "MergeSilver",
+        "type": "SynapseNotebook",
+        "dependsOn": [
+          {
+            "activity": "WriteBronze",
+            "dependencyConditions": [
+              "Succeeded"
+            ]
+          }
+        ],
+        "typeProperties": {
+          "notebook": {
+            "referenceName": {
+              "value": "mobility_silver",
+              "type": "Expression"
+            },
+            "type": "NotebookReference"
+          },
+          "sparkPool": {
+            "referenceName": {
+              "value": "mobilityspark",
+              "type": "Expression"
+            },
+            "type": "BigDataPoolReference"
+          },
+          "parameters": {
+            "database_prefix": {
+              "value": {
+                "value": "@pipeline().parameters.database_prefix",
+                "type": "Expression"
+              },
+              "type": "string"
+            },
+            "storage": {
+              "value": {
+                "value": "@pipeline().parameters.storage",
+                "type": "Expression"
+              },
+              "type": "string"
+            },
+            "batch_id": {
+              "value": {
+                "value": "@pipeline().parameters.batch_id",
+                "type": "Expression"
+              },
+              "type": "string"
+            },
+            "source": {
+              "value": {
+                "value": "@pipeline().parameters.config.source_name",
+                "type": "Expression"
+              },
+              "type": "string"
+            }
+          },
+          "snapshot": true
+        },
+        "linkedServiceName": {
+          "referenceName": "Synapse",
+          "type": "LinkedServiceReference"
+        },
+        "policy": {
+          "timeout": "0.01:00:00",
+          "retry": 3,
+          "retryIntervalInSeconds": 30,
+          "secureInput": true,
+          "secureOutput": true
+        }
+      }
+    ]
+  }
+}

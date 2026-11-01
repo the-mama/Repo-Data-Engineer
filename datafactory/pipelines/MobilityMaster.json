@@ -1,0 +1,283 @@
+{
+  "name": "MobilityMaster",
+  "properties": {
+    "concurrency": 1,
+    "parameters": {
+      "database_prefix": {
+        "type": "String",
+        "defaultValue": "mobility_dev"
+      },
+      "storage": {
+        "type": "String",
+        "defaultValue": "dltmprojects"
+      },
+      "force": {
+        "type": "Bool",
+        "defaultValue": false
+      }
+    },
+    "activities": [
+      {
+        "name": "ReadControl",
+        "type": "Lookup",
+        "dependsOn": [],
+        "typeProperties": {
+          "source": {
+            "type": "AzureSqlSource",
+            "sqlReaderStoredProcedureName": "dbo.get_due_sources",
+            "storedProcedureParameters": {
+              "force": {
+                "type": "Boolean",
+                "value": {
+                  "value": "@pipeline().parameters.force",
+                  "type": "Expression"
+                }
+              }
+            }
+          },
+          "dataset": {
+            "referenceName": "Control",
+            "type": "DatasetReference"
+          },
+          "firstRowOnly": false
+        },
+        "policy": {
+          "timeout": "0.01:00:00",
+          "retry": 3,
+          "retryIntervalInSeconds": 30,
+          "secureInput": true,
+          "secureOutput": true
+        }
+      },
+      {
+        "name": "IngestActiveSources",
+        "type": "ForEach",
+        "dependsOn": [
+          {
+            "activity": "ReadControl",
+            "dependencyConditions": [
+              "Succeeded"
+            ]
+          }
+        ],
+        "typeProperties": {
+          "items": {
+            "value": "@activity('ReadControl').output.value",
+            "type": "Expression"
+          },
+          "isSequential": true,
+          "activities": [
+            {
+              "name": "RunSource",
+              "type": "ExecutePipeline",
+              "dependsOn": [],
+              "typeProperties": {
+                "pipeline": {
+                  "referenceName": "IngestSource",
+                  "type": "PipelineReference"
+                },
+                "waitOnCompletion": true,
+                "parameters": {
+                  "config": {
+                    "value": "@item()",
+                    "type": "Expression"
+                  },
+                  "batch_id": {
+                    "value": "@pipeline().RunId",
+                    "type": "Expression"
+                  },
+                  "database_prefix": {
+                    "value": "@pipeline().parameters.database_prefix",
+                    "type": "Expression"
+                  },
+                  "storage": {
+                    "value": "@pipeline().parameters.storage",
+                    "type": "Expression"
+                  }
+                }
+              }
+            }
+          ]
+        }
+      },
+      {
+        "name": "BuildGold",
+        "type": "SynapseNotebook",
+        "dependsOn": [
+          {
+            "activity": "IngestActiveSources",
+            "dependencyConditions": [
+              "Succeeded"
+            ]
+          }
+        ],
+        "typeProperties": {
+          "notebook": {
+            "referenceName": {
+              "value": "mobility_gold",
+              "type": "Expression"
+            },
+            "type": "NotebookReference"
+          },
+          "sparkPool": {
+            "referenceName": {
+              "value": "mobilityspark",
+              "type": "Expression"
+            },
+            "type": "BigDataPoolReference"
+          },
+          "parameters": {
+            "database_prefix": {
+              "value": {
+                "value": "@pipeline().parameters.database_prefix",
+                "type": "Expression"
+              },
+              "type": "string"
+            },
+            "storage": {
+              "value": {
+                "value": "@pipeline().parameters.storage",
+                "type": "Expression"
+              },
+              "type": "string"
+            }
+          },
+          "snapshot": true
+        },
+        "linkedServiceName": {
+          "referenceName": "Synapse",
+          "type": "LinkedServiceReference"
+        },
+        "policy": {
+          "timeout": "0.01:00:00",
+          "retry": 3,
+          "retryIntervalInSeconds": 30,
+          "secureInput": true,
+          "secureOutput": true
+        }
+      },
+      {
+        "name": "CheckFreshness",
+        "type": "SynapseNotebook",
+        "dependsOn": [
+          {
+            "activity": "BuildGold",
+            "dependencyConditions": [
+              "Succeeded"
+            ]
+          }
+        ],
+        "typeProperties": {
+          "notebook": {
+            "referenceName": {
+              "value": "mobility_health",
+              "type": "Expression"
+            },
+            "type": "NotebookReference"
+          },
+          "sparkPool": {
+            "referenceName": {
+              "value": "mobilityspark",
+              "type": "Expression"
+            },
+            "type": "BigDataPoolReference"
+          },
+          "parameters": {
+            "database_prefix": {
+              "value": {
+                "value": "@pipeline().parameters.database_prefix",
+                "type": "Expression"
+              },
+              "type": "string"
+            },
+            "max_age_minutes": {
+              "value": "30",
+              "type": "int"
+            },
+            "max_quarantine_pct": {
+              "value": "5",
+              "type": "int"
+            },
+            "check_mode": {
+              "value": "freshness",
+              "type": "string"
+            }
+          },
+          "snapshot": true
+        },
+        "linkedServiceName": {
+          "referenceName": "Synapse",
+          "type": "LinkedServiceReference"
+        },
+        "policy": {
+          "timeout": "0.01:00:00",
+          "retry": 3,
+          "retryIntervalInSeconds": 30,
+          "secureInput": true,
+          "secureOutput": true
+        }
+      },
+      {
+        "name": "CheckQuality",
+        "type": "SynapseNotebook",
+        "dependsOn": [
+          {
+            "activity": "CheckFreshness",
+            "dependencyConditions": [
+              "Succeeded"
+            ]
+          }
+        ],
+        "typeProperties": {
+          "notebook": {
+            "referenceName": {
+              "value": "mobility_health",
+              "type": "Expression"
+            },
+            "type": "NotebookReference"
+          },
+          "sparkPool": {
+            "referenceName": {
+              "value": "mobilityspark",
+              "type": "Expression"
+            },
+            "type": "BigDataPoolReference"
+          },
+          "parameters": {
+            "database_prefix": {
+              "value": {
+                "value": "@pipeline().parameters.database_prefix",
+                "type": "Expression"
+              },
+              "type": "string"
+            },
+            "max_age_minutes": {
+              "value": "30",
+              "type": "int"
+            },
+            "max_quarantine_pct": {
+              "value": "5",
+              "type": "int"
+            },
+            "check_mode": {
+              "value": "quality",
+              "type": "string"
+            }
+          },
+          "snapshot": true
+        },
+        "linkedServiceName": {
+          "referenceName": "Synapse",
+          "type": "LinkedServiceReference"
+        },
+        "policy": {
+          "timeout": "0.01:00:00",
+          "retry": 3,
+          "retryIntervalInSeconds": 30,
+          "secureInput": true,
+          "secureOutput": true
+        }
+      }
+    ]
+  }
+}

@@ -1,0 +1,19 @@
+{
+  "name": "Http",
+  "properties": {
+    "type": "HttpServer",
+    "typeProperties": {
+      "url": {
+        "value": "@linkedService().url",
+        "type": "Expression"
+      },
+      "enableServerCertificateValidation": true,
+      "authenticationType": "Anonymous"
+    },
+    "parameters": {
+      "url": {
+        "type": "String"
+      }
+    }
+  }
+}

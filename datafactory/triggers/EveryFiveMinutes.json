@@ -1,0 +1,26 @@
+{
+  "name": "EveryFiveMinutes",
+  "properties": {
+    "type": "ScheduleTrigger",
+    "typeProperties": {
+      "recurrence": {
+        "frequency": "Minute",
+        "interval": 5,
+        "startTime": "2026-01-01T00:00:00Z",
+        "timeZone": "UTC"
+      }
+    },
+    "pipelines": [
+      {
+        "pipelineReference": {
+          "referenceName": "MobilityMaster",
+          "type": "PipelineReference"
+        },
+        "parameters": {
+          "database_prefix": "mobility_dev",
+          "storage": "dltmprojects"
+        }
+      }
+    ]
+  }
+}

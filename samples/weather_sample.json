@@ -1,0 +1,22 @@
+{
+  "latitude": 51.5,
+  "longitude": -0.12,
+  "hourly": {
+    "time": [
+      "2026-10-31T08:00",
+      "2026-11-01T01:00"
+    ],
+    "temperature_2m": [
+      10,
+      8
+    ],
+    "precipitation": [
+      1.2,
+      0
+    ],
+    "weather_code": [
+      61,
+      0
+    ]
+  }
+}

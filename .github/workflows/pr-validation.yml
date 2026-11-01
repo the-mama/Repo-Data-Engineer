@@ -1,0 +1,30 @@
+name: PR validation
+on:
+  pull_request:
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - run: pip install -e '.[dev]'
+      - run: ruff check .
+      - run: pytest -q
+      - run: python scripts/validate_repo.py
+      - uses: azure/cli@v2
+        with:
+          inlineScript: az bicep build --file infra/main.bicep --stdout >/dev/null
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - run: npm ci --ignore-scripts
+        working-directory: datafactory
+      - run: python scripts/configure_adf.py "$RUNNER_TEMP/adf" --validation
+      - name: Validate authored ADF assets
+        working-directory: datafactory
+        run: npm run build validate "$RUNNER_TEMP/adf" /subscriptions/00000000-0000-0000-0000-000000000000/resourceGroups/validation/providers/Microsoft.DataFactory/factories/dftmprojects

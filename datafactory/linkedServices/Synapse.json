@@ -1,0 +1,11 @@
+{
+  "name": "Synapse",
+  "properties": {
+    "type": "AzureSynapseArtifacts",
+    "typeProperties": {
+      "endpoint": "https://configure.dev.azuresynapse.net",
+      "authentication": "MSI",
+      "workspaceResourceId": "/subscriptions/00000000-0000-0000-0000-000000000000/resourceGroups/configure/providers/Microsoft.Synapse/workspaces/configure"
+    }
+  }
+}

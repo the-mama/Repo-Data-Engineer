@@ -1,0 +1,79 @@
+{
+  "header": {
+    "timestamp": 1793434800
+  },
+  "entity": [
+    {
+      "id": "v0",
+      "vehicle": {
+        "trip": {
+          "trip_id": "T1",
+          "route_id": "R1",
+          "start_date": "20261031"
+        },
+        "vehicle": {
+          "id": "BUS1"
+        },
+        "timestamp": 1793433600,
+        "position": {
+          "latitude": 51.5074,
+          "longitude": -0.1278
+        }
+      }
+    },
+    {
+      "id": "v1",
+      "vehicle": {
+        "trip": {
+          "trip_id": "T1",
+          "route_id": "R1",
+          "start_date": "20261031"
+        },
+        "vehicle": {
+          "id": "BUS1"
+        },
+        "timestamp": 1793433900,
+        "position": {
+          "latitude": 51.51,
+          "longitude": -0.12
+        }
+      }
+    },
+    {
+      "id": "v2",
+      "vehicle": {
+        "trip": {
+          "trip_id": "T1",
+          "route_id": "R1",
+          "start_date": "20261031"
+        },
+        "vehicle": {
+          "id": "BUS1"
+        },
+        "timestamp": 1793434200,
+        "position": {
+          "latitude": 150,
+          "longitude": -0.12
+        }
+      }
+    },
+    {
+      "id": "v0",
+      "vehicle": {
+        "trip": {
+          "trip_id": "T1",
+          "route_id": "R1",
+          "start_date": "20261031"
+        },
+        "vehicle": {
+          "id": "BUS1"
+        },
+        "timestamp": 1793433600,
+        "position": {
+          "latitude": 51.5074,
+          "longitude": -0.1278
+        }
+      }
+    }
+  ]
+}

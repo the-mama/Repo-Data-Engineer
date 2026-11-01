@@ -1,0 +1,32 @@
+{
+  "name": "LandingBinary",
+  "properties": {
+    "linkedServiceName": {
+      "referenceName": "Lake",
+      "type": "LinkedServiceReference"
+    },
+    "parameters": {
+      "folder": {
+        "type": "String"
+      },
+      "file": {
+        "type": "String"
+      }
+    },
+    "type": "Binary",
+    "typeProperties": {
+      "location": {
+        "type": "AzureBlobFSLocation",
+        "fileSystem": "landing",
+        "folderPath": {
+          "value": "@dataset().folder",
+          "type": "Expression"
+        },
+        "fileName": {
+          "value": "@dataset().file",
+          "type": "Expression"
+        }
+      }
+    }
+  }
+}

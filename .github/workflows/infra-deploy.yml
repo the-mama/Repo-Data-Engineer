@@ -1,0 +1,40 @@
+name: Infrastructure deployment
+on:
+  push:
+    branches: [main]
+    paths: ['infra/**', '.github/workflows/infra-deploy.yml']
+  workflow_dispatch:
+    inputs:
+      environment:
+        type: choice
+        options: [dev, prod]
+        default: dev
+permissions:
+  contents: read
+  id-token: write
+concurrency:
+  group: mobility-infra-${{ inputs.environment || 'dev' }}
+  cancel-in-progress: false
+jobs:
+  deploy:
+    environment: ${{ inputs.environment || 'dev' }}
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: azure/login@v2
+        with:
+          client-id: ${{ vars.AZURE_CLIENT_ID }}
+          tenant-id: ${{ vars.AZURE_TENANT_ID }}
+          subscription-id: ${{ vars.AZURE_SUBSCRIPTION_ID }}
+      - name: Deploy Bicep
+        env:
+          RESOURCE_GROUP: ${{ vars.RESOURCE_GROUP }}
+          ENVIRONMENT: ${{ inputs.environment || 'dev' }}
+          SQL_ADMIN_OBJECT_ID: ${{ vars.SQL_ADMIN_OBJECT_ID }}
+          SQL_ADMIN_LOGIN: ${{ vars.SQL_ADMIN_LOGIN }}
+          ALERT_EMAIL: ${{ vars.ALERT_EMAIL }}
+        run: >-
+          az deployment group create -g "$RESOURCE_GROUP"
+          --template-file infra/main.bicep
+          --parameters "@infra/environments/$ENVIRONMENT.parameters.json"
+          --parameters sqlAdminObjectId="$SQL_ADMIN_OBJECT_ID" sqlAdminLogin="$SQL_ADMIN_LOGIN" alertEmail="$ALERT_EMAIL"

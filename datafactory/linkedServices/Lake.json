@@ -1,0 +1,9 @@
+{
+  "name": "Lake",
+  "properties": {
+    "type": "AzureBlobFS",
+    "typeProperties": {
+      "url": "https://configure.dfs.core.windows.net"
+    }
+  }
+}
