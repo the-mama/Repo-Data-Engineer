@@ -19,12 +19,3 @@ jobs:
       - uses: azure/cli@v2
         with:
           inlineScript: az bicep build --file infra/main.bicep --stdout >/dev/null
-      - uses: actions/setup-node@v4
-        with:
-          node-version: '22'
-      - run: npm ci --ignore-scripts
-        working-directory: datafactory
-      - run: python scripts/configure_adf.py "$RUNNER_TEMP/adf" --validation
-      - name: Validate authored ADF assets
-        working-directory: datafactory
-        run: npm run build validate "$RUNNER_TEMP/adf" /subscriptions/00000000-0000-0000-0000-000000000000/resourceGroups/validation/providers/Microsoft.DataFactory/factories/dftmprojects

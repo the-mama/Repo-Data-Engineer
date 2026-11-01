@@ -190,7 +190,7 @@
       },
       {
         "name": "CommitWatermark",
-        "type": "SqlServerStoredProcedure",
+        "type": "SynapseNotebook",
         "dependsOn": [
           {
             "activity": "TransformSource",
@@ -199,42 +199,59 @@
             ]
           }
         ],
+        "policy": {
+          "timeout": "0.01:00:00",
+          "retry": 2,
+          "retryIntervalInSeconds": 30,
+          "secureInput": true,
+          "secureOutput": true
+        },
         "typeProperties": {
-          "storedProcedureName": "dbo.mark_source_success",
-          "storedProcedureParameters": {
+          "notebook": {
+            "referenceName": "mobility_control_commit",
+            "type": "NotebookReference"
+          },
+          "sparkPool": {
+            "referenceName": "mobilityspark",
+            "type": "BigDataPoolReference"
+          },
+          "parameters": {
+            "database_prefix": {
+              "value": {
+                "value": "@pipeline().parameters.database_prefix",
+                "type": "Expression"
+              },
+              "type": "string"
+            },
+            "storage": {
+              "value": {
+                "value": "@pipeline().parameters.storage",
+                "type": "Expression"
+              },
+              "type": "string"
+            },
             "source_name": {
               "value": {
                 "value": "@pipeline().parameters.config.source_name",
                 "type": "Expression"
               },
-              "type": "String"
+              "type": "string"
             },
             "entity_name": {
               "value": {
                 "value": "@pipeline().parameters.config.entity_name",
                 "type": "Expression"
               },
-              "type": "String"
+              "type": "string"
             },
             "watermark": {
               "value": {
                 "value": "@if(equals(pipeline().parameters.config.weather_kind,'historical'),formatDateTime(addDays(utcNow(),-2),'yyyy-MM-dd'),utcNow())",
                 "type": "Expression"
               },
-              "type": "String"
+              "type": "string"
             }
           }
-        },
-        "linkedServiceName": {
-          "referenceName": "ControlSql",
-          "type": "LinkedServiceReference"
-        },
-        "policy": {
-          "timeout": "0.01:00:00",
-          "retry": 3,
-          "retryIntervalInSeconds": 30,
-          "secureInput": true,
-          "secureOutput": true
         }
       }
     ]

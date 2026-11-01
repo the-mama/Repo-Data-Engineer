@@ -1,0 +1,72 @@
+[
+  {
+    "source_name": "mbta",
+    "entity_name": "static",
+    "api_url": "https://cdn.mbta.com/MBTA_GTFS.zip",
+    "key_vault_secret_name": null,
+    "ingestion_type": "snapshot",
+    "watermark_column": "timestamp",
+    "last_watermark_value": null,
+    "target_folder": "mbta/static",
+    "schedule_cron": "0 2 * * *",
+    "is_active": true,
+    "content_format": "gtfs_zip",
+    "weather_kind": "forecast"
+  },
+  {
+    "source_name": "mbta",
+    "entity_name": "vehicle_positions",
+    "api_url": "https://cdn.mbta.com/realtime/VehiclePositions.pb",
+    "key_vault_secret_name": null,
+    "ingestion_type": "snapshot",
+    "watermark_column": "timestamp",
+    "last_watermark_value": null,
+    "target_folder": "mbta/vehicle_positions",
+    "schedule_cron": "*/5 * * * *",
+    "is_active": true,
+    "content_format": "protobuf",
+    "weather_kind": "forecast"
+  },
+  {
+    "source_name": "mbta",
+    "entity_name": "trip_updates",
+    "api_url": "https://cdn.mbta.com/realtime/TripUpdates.pb",
+    "key_vault_secret_name": null,
+    "ingestion_type": "snapshot",
+    "watermark_column": "timestamp",
+    "last_watermark_value": null,
+    "target_folder": "mbta/trip_updates",
+    "schedule_cron": "*/5 * * * *",
+    "is_active": true,
+    "content_format": "protobuf",
+    "weather_kind": "forecast"
+  },
+  {
+    "source_name": "boston_weather",
+    "entity_name": "weather",
+    "api_url": "https://api.open-meteo.com/v1/forecast?latitude=42.36&longitude=-71.06&hourly=temperature_2m,precipitation,weather_code&timezone=UTC",
+    "key_vault_secret_name": null,
+    "ingestion_type": "snapshot",
+    "watermark_column": "timestamp",
+    "last_watermark_value": null,
+    "target_folder": "boston_weather/weather",
+    "schedule_cron": "0 * * * *",
+    "is_active": true,
+    "content_format": "json",
+    "weather_kind": "forecast"
+  },
+  {
+    "source_name": "boston_history",
+    "entity_name": "weather",
+    "api_url": "https://archive-api.open-meteo.com/v1/archive?latitude=42.36&longitude=-71.06&start_date={start_date}&end_date={end_date}&hourly=temperature_2m,precipitation,weather_code&timezone=UTC",
+    "key_vault_secret_name": null,
+    "ingestion_type": "incremental",
+    "watermark_column": "timestamp",
+    "last_watermark_value": null,
+    "target_folder": "boston_history/weather",
+    "schedule_cron": "0 2 * * *",
+    "is_active": true,
+    "content_format": "json",
+    "weather_kind": "historical"
+  }
+]

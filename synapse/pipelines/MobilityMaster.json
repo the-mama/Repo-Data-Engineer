@@ -23,21 +23,24 @@
         "dependsOn": [],
         "typeProperties": {
           "source": {
-            "type": "AzureSqlSource",
-            "sqlReaderStoredProcedureName": "dbo.get_due_sources",
-            "storedProcedureParameters": {
-              "force": {
-                "type": "Boolean",
-                "value": {
-                  "value": "@pipeline().parameters.force",
-                  "type": "Expression"
-                }
-              }
+            "type": "JsonSource",
+            "storeSettings": {
+              "type": "AzureBlobFSReadSettings",
+              "recursive": false
+            },
+            "formatSettings": {
+              "type": "JsonReadSettings"
             }
           },
           "dataset": {
-            "referenceName": "Control",
-            "type": "DatasetReference"
+            "referenceName": "ControlConfig",
+            "type": "DatasetReference",
+            "parameters": {
+              "database_prefix": {
+                "value": "@pipeline().parameters.database_prefix",
+                "type": "Expression"
+              }
+            }
           },
           "firstRowOnly": false
         },
@@ -50,8 +53,8 @@
         }
       },
       {
-        "name": "IngestActiveSources",
-        "type": "ForEach",
+        "name": "PlanSources",
+        "type": "SynapseNotebook",
         "dependsOn": [
           {
             "activity": "ReadControl",
@@ -60,9 +63,68 @@
             ]
           }
         ],
+        "policy": {
+          "timeout": "0.01:00:00",
+          "retry": 2,
+          "retryIntervalInSeconds": 30,
+          "secureInput": true,
+          "secureOutput": true
+        },
+        "typeProperties": {
+          "notebook": {
+            "referenceName": "mobility_control_plan",
+            "type": "NotebookReference"
+          },
+          "sparkPool": {
+            "referenceName": "mobilityspark",
+            "type": "BigDataPoolReference"
+          },
+          "parameters": {
+            "database_prefix": {
+              "value": {
+                "value": "@pipeline().parameters.database_prefix",
+                "type": "Expression"
+              },
+              "type": "string"
+            },
+            "storage": {
+              "value": {
+                "value": "@pipeline().parameters.storage",
+                "type": "Expression"
+              },
+              "type": "string"
+            },
+            "config_json": {
+              "value": {
+                "value": "@string(activity('ReadControl').output.value)",
+                "type": "Expression"
+              },
+              "type": "string"
+            },
+            "force": {
+              "value": {
+                "value": "@pipeline().parameters.force",
+                "type": "Expression"
+              },
+              "type": "bool"
+            }
+          }
+        }
+      },
+      {
+        "name": "IngestActiveSources",
+        "type": "ForEach",
+        "dependsOn": [
+          {
+            "activity": "PlanSources",
+            "dependencyConditions": [
+              "Succeeded"
+            ]
+          }
+        ],
         "typeProperties": {
           "items": {
-            "value": "@activity('ReadControl').output.value",
+            "value": "@json(activity('PlanSources').output.status.Output.result.exitValue).sources",
             "type": "Expression"
           },
           "isSequential": true,
@@ -113,17 +175,11 @@
         ],
         "typeProperties": {
           "notebook": {
-            "referenceName": {
-              "value": "mobility_gold",
-              "type": "Expression"
-            },
+            "referenceName": "mobility_gold",
             "type": "NotebookReference"
           },
           "sparkPool": {
-            "referenceName": {
-              "value": "mobilityspark",
-              "type": "Expression"
-            },
+            "referenceName": "mobilityspark",
             "type": "BigDataPoolReference"
           },
           "parameters": {
@@ -143,10 +199,6 @@
             }
           },
           "snapshot": true
-        },
-        "linkedServiceName": {
-          "referenceName": "Synapse",
-          "type": "LinkedServiceReference"
         },
         "policy": {
           "timeout": "0.01:00:00",
@@ -169,17 +221,11 @@
         ],
         "typeProperties": {
           "notebook": {
-            "referenceName": {
-              "value": "mobility_health",
-              "type": "Expression"
-            },
+            "referenceName": "mobility_health",
             "type": "NotebookReference"
           },
           "sparkPool": {
-            "referenceName": {
-              "value": "mobilityspark",
-              "type": "Expression"
-            },
+            "referenceName": "mobilityspark",
             "type": "BigDataPoolReference"
           },
           "parameters": {
@@ -205,10 +251,6 @@
           },
           "snapshot": true
         },
-        "linkedServiceName": {
-          "referenceName": "Synapse",
-          "type": "LinkedServiceReference"
-        },
         "policy": {
           "timeout": "0.01:00:00",
           "retry": 3,
@@ -230,17 +272,11 @@
         ],
         "typeProperties": {
           "notebook": {
-            "referenceName": {
-              "value": "mobility_health",
-              "type": "Expression"
-            },
+            "referenceName": "mobility_health",
             "type": "NotebookReference"
           },
           "sparkPool": {
-            "referenceName": {
-              "value": "mobilityspark",
-              "type": "Expression"
-            },
+            "referenceName": "mobilityspark",
             "type": "BigDataPoolReference"
           },
           "parameters": {
@@ -265,10 +301,6 @@
             }
           },
           "snapshot": true
-        },
-        "linkedServiceName": {
-          "referenceName": "Synapse",
-          "type": "LinkedServiceReference"
         },
         "policy": {
           "timeout": "0.01:00:00",

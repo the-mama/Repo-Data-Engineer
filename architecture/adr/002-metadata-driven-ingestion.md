@@ -1,9 +1,12 @@
-# Metadata-driven ingestion
+# Metadata-driven ingestion in Synapse
 
-Status: Accepted
+Status: Accepted; updated for the user's all-Synapse consolidation request.
 
-Decision: Use Azure SQL pipeline_control and one ADF dispatcher with parameterized child pipelines.
+Keep versioned configuration JSON in landing and mutable polling metadata in the Delta table
+<prefix>_ops.pipeline_control. Synapse Lookup reads configuration, control_plan validates/MERGEs it and
+returns due rows, and control_commit persists success only after Silver. Configuration refresh must
+preserve watermarks. Unsupported schedules, duplicate keys and unsafe paths are rejected.
 
-Rationale: Configuration and due-time checks avoid duplicated pipelines; a constrained UTC cron subset is explicit and testable.
-
-Consequences: Synapse Spark and serverless SQL require workspace identity and serving-view bootstrap. Atomicity is per table; recovery must rerun downstream materializations. Gold is served with Synapse serverless SQL to retain native Delta compatibility.
+This removes the external Azure SQL control database and its fixed charge, with additional Spark
+planning work/session startup. All orchestration is in one workspace; scheduling remains stopped by
+default for development cost control. No dedicated SQL pool is introduced merely to store metadata.

@@ -1,0 +1,101 @@
+{
+  "name": "ConnectionCheck",
+  "properties": {
+    "parameters": {
+      "database_prefix": {
+        "type": "String",
+        "defaultValue": "mobility_dev"
+      },
+      "probe_url": {
+        "type": "String",
+        "defaultValue": "https://api.open-meteo.com/v1/forecast?latitude=51.5&longitude=-0.12&hourly=weather_code&timezone=UTC"
+      }
+    },
+    "activities": [
+      {
+        "name": "ReadConfiguration",
+        "type": "Lookup",
+        "typeProperties": {
+          "source": {
+            "type": "JsonSource",
+            "storeSettings": {
+              "type": "AzureBlobFSReadSettings"
+            },
+            "formatSettings": {
+              "type": "JsonReadSettings"
+            }
+          },
+          "dataset": {
+            "referenceName": "ControlConfig",
+            "type": "DatasetReference",
+            "parameters": {
+              "database_prefix": {
+                "value": "@pipeline().parameters.database_prefix",
+                "type": "Expression"
+              }
+            }
+          },
+          "firstRowOnly": false
+        }
+      },
+      {
+        "name": "CopyWeatherProbe",
+        "type": "Copy",
+        "dependsOn": [
+          {
+            "activity": "ReadConfiguration",
+            "dependencyConditions": [
+              "Succeeded"
+            ]
+          }
+        ],
+        "policy": {
+          "timeout": "0.00:10:00",
+          "retry": 1,
+          "retryIntervalInSeconds": 15
+        },
+        "typeProperties": {
+          "source": {
+            "type": "BinarySource",
+            "storeSettings": {
+              "type": "HttpReadSettings",
+              "requestMethod": "GET",
+              "requestTimeout": "00:02:00"
+            }
+          },
+          "sink": {
+            "type": "BinarySink",
+            "storeSettings": {
+              "type": "AzureBlobFSWriteSettings"
+            }
+          }
+        },
+        "inputs": [
+          {
+            "referenceName": "HttpBinary",
+            "type": "DatasetReference",
+            "parameters": {
+              "url": {
+                "value": "@pipeline().parameters.probe_url",
+                "type": "Expression"
+              }
+            }
+          }
+        ],
+        "outputs": [
+          {
+            "referenceName": "LandingBinary",
+            "type": "DatasetReference",
+            "parameters": {
+              "folder": {
+                "value": "@concat(pipeline().parameters.database_prefix,'/_checks/',pipeline().RunId)",
+                "type": "Expression"
+              },
+              "file": "weather.json"
+            }
+          }
+        ]
+      }
+    ]
+  }
+}

@@ -1,18 +1,10 @@
 """Deploy versioned workspace wheels and notebooks via Azure CLI (OIDC / az login).
-Stop/drain ADF before updating pool packages; active sessions retain old libraries.
+Stop/drain Synapse pipelines before updating pool packages; active sessions retain old libraries.
 """
 
-import json
 import os
-import subprocess
 from pathlib import Path
-
-
-def az(*args, capture=False):
-    command = ["az", *args, "--only-show-errors"]
-    if capture:
-        return json.loads(subprocess.check_output(command + ["--output", "json"]))
-    subprocess.run(command, check=True)
+from azure_cli import az
 
 
 def deploy():
@@ -42,7 +34,7 @@ def deploy():
     )
     old = [
         p["name"]
-        for p in existing.get("customLibraries", [])
+        for p in (existing.get("customLibraries") or [])
         if p["name"].startswith("urban_mobility-") and p["name"] != wheel.name
     ]
     if old:
@@ -97,7 +89,7 @@ def deploy():
             "mobility",
         )
     print(
-        "Synapse notebooks and pool package deployed; run an ADF force=true acceptance batch before enabling the trigger."
+        "Synapse notebooks and pool package deployed; run a Synapse force=true acceptance batch before enabling the trigger."
     )
 
 

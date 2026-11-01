@@ -5,22 +5,23 @@
 Run Ruff, pytest, scripts/validate_repo.py and Bicep compilation as shown in README. The existing unit
 suite covers UTC/DST, overnight schedules, dedup, delay, weather, protobuf, validation and sample data.
 Notebook checks validate real tagged parameter cells and compile the code inside the imported ipynb files.
-Microsoft's ADF utility validates/exports native SynapseNotebook activity JSON through the rendered tree.
+Native Synapse artifacts are validated for references/parameters locally and published through the workspace API.
 
 The Java 17 / Spark 3.5.3 / Delta 3.2.1 smoke test uses local explicit database locations, executes Bronze
 retry, Silver retry/dedup/quarantine, malformed ZIP recovery, invalid-reference quarantine, Gold MERGE and
 reconciliation, and Spark SQL view queries. It asserts protocol reader 1/writer 2 on every Gold table.
-Local Spark cannot execute serverless T-SQL or test Synapse identity/session/library behavior.
+The integration also tests Delta control planning, commit and configuration refresh without resetting
+watermarks. Local Spark cannot execute serverless T-SQL or test Synapse identity/session/library behavior.
 
 ## Azure acceptance before production
 
 1. Deploy Bicep in the selected exact-name environment. Verify Synapse workspace/Spark pool/MI grants;
-   no Databricks resource or dedicated SQL pool should be created.
-2. Bootstrap Synapse data-plane roles and SQL control user. Confirm ADF cannot read unrelated vaults or
-   containers or write arbitrary control SQL. Verify deployment principal artifact/package permissions.
+   no standalone Data Factory, Azure SQL control server, Databricks resource or dedicated SQL pool should be created.
+2. Bootstrap Synapse data-plane roles and landing metadata publication. Confirm Synapse Pipelines cannot read unrelated vaults or
+   containers or alter unrelated Delta control state. Verify deployment principal artifact/package permissions.
 3. Upload wheel/requirements, wait for successful pool installation, import notebooks and inspect tagged
    parameter cells. Run as workspace identity and verify reads/writes across all platform containers.
-4. Force ADF master: verify five due feeds, raw bytes/decoded Parquet, Bronze audit fields, six mandatory
+4. Force Synapse Pipelines master: verify five due feeds, raw bytes/decoded Parquet, Bronze audit fields, six mandatory
    static Silver tables, realtime/weather records, Gold dimensions/facts and successful health checks.
 5. Replay same input/batch and corrections: Bronze count stable, Silver keys unique, Gold counts stable.
    Inject malformed data and unknown schema fields; invalid rows quarantine, raw payload retains drift.

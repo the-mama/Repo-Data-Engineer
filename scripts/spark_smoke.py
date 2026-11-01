@@ -32,6 +32,20 @@ with tempfile.TemporaryDirectory(prefix="mobility-spark-") as temp:
     spark.sparkContext.setLogLevel("ERROR")
     spark.conf.set("mobility.localRoot", str(work / "lake"))
     try:
+        from mobility.control import plan_sources, commit_source
+        from datetime import datetime, timezone
+
+        config = json.loads((root / "synapse/config/pipeline_control.json").read_text())
+        assert len(plan_sources(spark, "mobility_test", "unused", config, force=True)) == 5
+        commit_source(spark, "mobility_test", "unused", "mbta", "trip_updates", "2026-11-01T00:00:00Z")
+        planned = plan_sources(spark, "mobility_test", "unused", config, now=datetime.now(timezone.utc))
+        assert not any(r["source_name"] == "mbta" and r["entity_name"] == "trip_updates" for r in planned)
+        saved = (
+            spark.table("mobility_test_ops.pipeline_control")
+            .where("source_name='mbta' AND entity_name='trip_updates'")
+            .first()
+        )
+        assert saved.last_watermark_value == "2026-11-01T00:00:00Z", "config refresh reset progress"
         archive = io.BytesIO()
         with zipfile.ZipFile(archive, "w") as zipped:
             for path in (root / "samples/gtfs_static_sample").glob("*.txt"):

@@ -1,37 +1,24 @@
-# Security
+# Unified Synapse security
 
-ADF system identity writes landing, reads only the configured Key Vault's secrets, and executes only
-two control SQL procedures. Native Synapse notebook activities authenticate with ADF MSI. Synapse
-Artifact User, Compute Operator and Credential User roles authorize notebook execution; these are
-Synapse data-plane roles, distinct from ARM Contributor.
+The Synapse workspace system identity performs Copy, Key Vault Web reads and pipeline Spark I/O. It has
+container-scoped Blob Data Contributor on landing/bronze/silver/gold/quarantine/synapse and Secrets User
+on the project vault. There is no Data Factory identity, SQL control user or SQL password. Configuration
+is public endpoint metadata; polling progress lives in Delta in the ops database.
 
-Synapse workspace managed identity has Blob Data Contributor at the six project containers: landing,
-bronze, silver, gold, quarantine and the workspace filesystem synapse. It handles pipeline Spark I/O.
-Manual notebooks must explicitly run as managed identity or the interactive user's storage RBAC applies.
-The workspace default lake does not supply Unity Catalog; Spark databases use explicit ADLS locations.
+The deployment identity needs scoped landing write permission to upload metadata and Synapse artifact/
+package permissions. Do not equate ARM Contributor with Synapse data-plane access. Manual notebooks can
+run under the user or workspace identity; select the intended context explicitly.
 
-Serverless SQL serving views use Microsoft Entra pass-through. Every report identity needs SQL SELECT
-on the serving Gold schema and Storage Blob Data Reader on the Gold container. That storage grant also
-permits direct Gold-file reading; this is a deliberate access boundary. For SQL-only isolation, separately
-implement and test a workspace managed-identity credential pattern and narrower SQL grants.
+Serverless serving uses Entra pass-through. Report readers need SQL SELECT and Gold-container Blob Data
+Reader. That storage permission allows direct Gold file reading too; use a separately reviewed SQL-only
+workspace credential pattern if this is unacceptable. Synapse SQL administrator group membership is
+separate from Synapse Studio artifact administration.
 
-Azure SQL control and Synapse SQL are Entra-only. GitHub Actions use OIDC, with required reviewers configured
-for prod. No tokens, subscription IDs, passwords, SAS or connection strings are committed. Optional API
-credentials live in Key Vault as header blocks. Secure activity inputs/outputs prevent header logging.
-ADLS shared keys and public blobs are disabled; HTTPS/TLS, vault RBAC, soft deletion and purge protection
-are enabled. Operational vehicle IDs require access review even without passenger/driver data.
+GitHub OIDC avoids long-lived deployment secrets; prod needs explicit required reviewers. Optional API
+headers remain in Key Vault and secret/Copy activity input/output logging is secured. Never put keys in
+URLs. New storage accounts disable shared keys/public blobs; reused accounts preserve settings and must
+be audited separately. Vault RBAC, purge protection, TLS and diagnostics are enabled.
 
-## Network production gate
-
-The development template uses public service endpoints protected by Entra/RBAC and trusted-Azure SQL/
-Synapse firewall rules. This is not a private-network production perimeter. Add organization-approved
-managed VNet/private endpoints and DNS for workspace dev/SQL, storage DFS/blob, Key Vault and control SQL,
-managed ADF networking and explicit public API egress before a regulated release. Validate Synapse Spark
-and serverless access from that network. Avoid broad firewall bypasses in production.
-
-Pin reviewed dependencies/Actions, protect main, require PR checks and scan releases. Pause/drain ADF
-before changing pool packages. Feed licensing and attribution must be reviewed for production use.
-
-When reuseExistingStorage=true, the account's existing security, network, redundancy and retention
-settings are preserved. Audit those settings explicitly; the new-account hardening settings described
-above are not automatically applied to a reused account. A one-way HNS migration requires separate approval.
+The template is a public-endpoint development baseline. Add organization-approved private endpoints,
+DNS, network restrictions and API egress controls before a regulated production release. Permit only
+approved client IPs for administration. Drain jobs before package changes and protect source branches.

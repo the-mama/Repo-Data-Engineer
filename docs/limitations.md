@@ -2,7 +2,8 @@
 
 - The repository targets Synapse Spark 3.5 and serverless SQL, replacing the earlier Databricks requirement
   at the user's request. Existing deployed Databricks data/resources are not automatically migrated/deleted.
-  No cloud resources have been deployed by this work.
+  The development workspace and native pipeline artifacts have been deployed; see validation-results.md
+  for tested paths and remaining end-to-end acceptance.
 - Exact globally unique storage names prevent independent dev/prod lakes using the same name. Choose one
   installation or approve separate names; do not retarget dev resources during production deployment.
 - Serverless SQL requires compatible Delta reader protocol 1. Gold uses writer 2, classic checkpoints,
@@ -21,6 +22,10 @@
 - Table atomicity is per Delta table; pause reports on failed Gold builds and replay downstream steps.
 - Weather is nearest grid/hour within 100 km, with archive preference. Weather impact is associative,
   not causal, and suppresses small groups. Trip distance/vehicle counts repeat across stop facts.
-- Spark pool library updates apply to new sessions. Drain ADF before release; use versioned immutable wheels.
+- Spark pool library updates apply to new sessions. Drain Synapse Pipelines before release; use versioned immutable wheels.
 - A three-node Spark pool and frequent scheduling can be expensive. Auto-pause cannot help an active workload.
 - Optional UK Carbon Intensity enrichment remains deferred.
+
+- When reintroducing a previously removed source row, change a configuration revision field (or another
+  reviewed configuration value) to refresh its config_hash; keep inactive rows explicitly is_active=false
+  for routine pause/resume instead of deleting and recreating them.

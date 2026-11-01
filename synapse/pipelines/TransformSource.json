@@ -27,17 +27,11 @@
         "dependsOn": [],
         "typeProperties": {
           "notebook": {
-            "referenceName": {
-              "value": "mobility_bronze",
-              "type": "Expression"
-            },
+            "referenceName": "mobility_bronze",
             "type": "NotebookReference"
           },
           "sparkPool": {
-            "referenceName": {
-              "value": "mobilityspark",
-              "type": "Expression"
-            },
+            "referenceName": "mobilityspark",
             "type": "BigDataPoolReference"
           },
           "parameters": {
@@ -107,10 +101,6 @@
           },
           "snapshot": true
         },
-        "linkedServiceName": {
-          "referenceName": "Synapse",
-          "type": "LinkedServiceReference"
-        },
         "policy": {
           "timeout": "0.01:00:00",
           "retry": 3,
@@ -132,17 +122,11 @@
         ],
         "typeProperties": {
           "notebook": {
-            "referenceName": {
-              "value": "mobility_silver",
-              "type": "Expression"
-            },
+            "referenceName": "mobility_silver",
             "type": "NotebookReference"
           },
           "sparkPool": {
-            "referenceName": {
-              "value": "mobilityspark",
-              "type": "Expression"
-            },
+            "referenceName": "mobilityspark",
             "type": "BigDataPoolReference"
           },
           "parameters": {
@@ -176,10 +160,6 @@
             }
           },
           "snapshot": true
-        },
-        "linkedServiceName": {
-          "referenceName": "Synapse",
-          "type": "LinkedServiceReference"
         },
         "policy": {
           "timeout": "0.01:00:00",

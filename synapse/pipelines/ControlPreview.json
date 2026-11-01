@@ -1,0 +1,139 @@
+{
+  "name": "ControlPreview",
+  "properties": {
+    "parameters": {
+      "database_prefix": {
+        "type": "String",
+        "defaultValue": "mobility_dev"
+      },
+      "storage": {
+        "type": "String",
+        "defaultValue": "dltmmobilitydev"
+      },
+      "force": {
+        "type": "Bool",
+        "defaultValue": false
+      }
+    },
+    "variables": {
+      "planned_sources": {
+        "type": "Array"
+      }
+    },
+    "activities": [
+      {
+        "name": "ReadControl",
+        "type": "Lookup",
+        "dependsOn": [],
+        "typeProperties": {
+          "source": {
+            "type": "JsonSource",
+            "storeSettings": {
+              "type": "AzureBlobFSReadSettings",
+              "recursive": false
+            },
+            "formatSettings": {
+              "type": "JsonReadSettings"
+            }
+          },
+          "dataset": {
+            "referenceName": "ControlConfig",
+            "type": "DatasetReference",
+            "parameters": {
+              "database_prefix": {
+                "value": "@pipeline().parameters.database_prefix",
+                "type": "Expression"
+              }
+            }
+          },
+          "firstRowOnly": false
+        },
+        "policy": {
+          "timeout": "0.01:00:00",
+          "retry": 3,
+          "retryIntervalInSeconds": 30,
+          "secureInput": true,
+          "secureOutput": true
+        }
+      },
+      {
+        "name": "PlanSources",
+        "type": "SynapseNotebook",
+        "dependsOn": [
+          {
+            "activity": "ReadControl",
+            "dependencyConditions": [
+              "Succeeded"
+            ]
+          }
+        ],
+        "policy": {
+          "timeout": "0.01:00:00",
+          "retry": 2,
+          "retryIntervalInSeconds": 30,
+          "secureInput": true,
+          "secureOutput": true
+        },
+        "typeProperties": {
+          "notebook": {
+            "referenceName": "mobility_control_plan",
+            "type": "NotebookReference"
+          },
+          "sparkPool": {
+            "referenceName": "mobilityspark",
+            "type": "BigDataPoolReference"
+          },
+          "parameters": {
+            "database_prefix": {
+              "value": {
+                "value": "@pipeline().parameters.database_prefix",
+                "type": "Expression"
+              },
+              "type": "string"
+            },
+            "storage": {
+              "value": {
+                "value": "@pipeline().parameters.storage",
+                "type": "Expression"
+              },
+              "type": "string"
+            },
+            "config_json": {
+              "value": {
+                "value": "@string(activity('ReadControl').output.value)",
+                "type": "Expression"
+              },
+              "type": "string"
+            },
+            "force": {
+              "value": {
+                "value": "@pipeline().parameters.force",
+                "type": "Expression"
+              },
+              "type": "bool"
+            }
+          }
+        }
+      },
+      {
+        "name": "PreviewSources",
+        "type": "SetVariable",
+        "dependsOn": [
+          {
+            "activity": "PlanSources",
+            "dependencyConditions": [
+              "Succeeded"
+            ]
+          }
+        ],
+        "typeProperties": {
+          "variableName": "planned_sources",
+          "value": {
+            "value": "@json(activity('PlanSources').output.status.Output.result.exitValue).sources",
+            "type": "Expression"
+          }
+        }
+      }
+    ]
+  }
+}

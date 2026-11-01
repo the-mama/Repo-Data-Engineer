@@ -51,7 +51,7 @@ def test_serverless_renderer_has_tsql_delta_paths(tmp_path):
         identifier("unsafe';DROP TABLE x")
 
 
-def test_adf_uses_synapse_and_environment_prefix():
+def test_pipeline_uses_local_synapse_and_environment_prefix():
     def activities(nodes):
         for node in nodes:
             yield node
@@ -59,11 +59,11 @@ def test_adf_uses_synapse_and_environment_prefix():
             for key in ["activities", "ifTrueActivities", "ifFalseActivities"]:
                 yield from activities(props.get(key, []))
 
-    for path in (ROOT / "datafactory/pipelines").glob("*.json"):
+    for path in (ROOT / "synapse/pipelines").glob("*.json"):
         document = json.loads(path.read_text())
         assert "catalog" not in document["properties"]["parameters"]
         for node in activities(document["properties"]["activities"]):
             assert node["type"] != "DatabricksNotebook"
             if node["type"] == "SynapseNotebook":
-                assert node["linkedServiceName"]["referenceName"] == "Synapse"
+                assert "linkedServiceName" not in node
                 assert "database_prefix" in node["typeProperties"]["parameters"]

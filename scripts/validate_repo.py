@@ -1,4 +1,4 @@
-"""Static dependency checks complement Microsoft's ADF validation and Bicep compiler."""
+"""Static dependency checks complement Synapse artifact publishing and Bicep compiler."""
 
 import ast
 import json
@@ -11,7 +11,7 @@ ROOT = Path(__file__).resolve().parents[1]
 def validate():
     documents = {}
     for folder in ("pipelines", "datasets", "linkedServices", "triggers"):
-        for file in (ROOT / "datafactory" / folder).glob("*.json"):
+        for file in (ROOT / "synapse" / folder).glob("*.json"):
             obj = json.loads(file.read_text())
             assert obj["name"] == file.stem, file
             assert "properties" in obj, file
@@ -20,7 +20,7 @@ def validate():
     def walk(node):
         if isinstance(node, dict):
             if node.get("type") == "SynapseNotebook":
-                name = node["typeProperties"]["notebook"]["referenceName"]["value"]
+                name = node["typeProperties"]["notebook"]["referenceName"]
                 assert name.startswith("mobility_")
                 path = ROOT / "synapse/notebooks" / (name.removeprefix("mobility_") + ".ipynb")
                 assert path.exists(), name
@@ -28,6 +28,10 @@ def validate():
                 defaults = {}
                 exec(compile("".join(notebook["cells"][0]["source"]), str(path), "exec"), {}, defaults)
                 assert set(node["typeProperties"].get("parameters", {})) <= set(defaults), name
+            if node.get("type") == "SynapseNotebook":
+                assert "linkedServiceName" not in node, (
+                    "Local notebooks must not reference a cross-workspace service"
+                )
             if "referenceName" in node:
                 folder = {
                     "PipelineReference": "pipelines",
@@ -55,7 +59,7 @@ def validate():
             ast.parse(file.read_text(), filename=str(file))
     for file in list((ROOT / ".github/workflows").glob("*.yml")):
         yaml.safe_load(file.read_text())
-    print(f"Validated {len(documents)} ADF assets, Python/notebook syntax and workflow YAML")
+    print(f"Validated {len(documents)} Synapse assets, Python/notebook syntax and workflow YAML")
 
 
 if __name__ == "__main__":

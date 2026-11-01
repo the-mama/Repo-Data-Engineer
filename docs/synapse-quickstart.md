@@ -1,44 +1,42 @@
-# Getting comfortable with Synapse
+# One workspace: where to look
 
-There are two different compute engines in this project. **Spark** runs Python and writes Delta tables.
-**Serverless SQL** reads Gold files using T-SQL for Power BI. You do not need a dedicated SQL pool.
-Data Factory remains the scheduler, so the ingestion screen is still in ADF Studio.
+Open your Azure Synapse workspace in Azure Portal, then **Open Synapse Studio**.
 
-After the README deployment steps:
-
-1. Open the Azure Synapse workspace in the Azure portal and select **Open Synapse Studio**.
-2. In **Manage → Apache Spark pools**, find `mobilityspark`. Check that its runtime is 3.5,
-   auto-pause is enabled, and the mobility wheel/library installation has succeeded.
-3. In **Develop → Notebooks → mobility**, open `mobility_bronze`, `mobility_silver`, `mobility_gold`
-   or `mobility_health`. The first cell has tagged parameter defaults; ADF supplies actual values.
-   To test manually, set a real retained `landing_file`, source, format and batch ID. Run Bronze,
-   then Silver, then Gold after a complete static/realtime/weather bootstrap exists.
-4. Select **Run as managed identity** when manually executing notebooks, and use the configured pool.
-   Your user needs Synapse Compute Operator and Synapse Credential User for the workspace identity.
-   Pipeline notebook executions use the workspace identity. An ordinary interactive session can instead
-   use your own identity; in that case your user also needs storage RBAC.
-5. Under **Data → Workspace → Lake database**, inspect databases such as `mobility_dev_bronze`,
-   `mobility_dev_silver`, `mobility_dev_gold` and `mobility_dev_ops`. In a Spark notebook:
+1. **Integrate → Pipelines**: MobilityMaster is the entry point. IngestSource and TransformSource are its
+   child pipelines. Open the master to see Lookup → control planning → ForEach → Gold → health.
+2. **Manage → Linked services**: Lake, Http and KeyVault connect sources/storage using the workspace
+   managed identity. There is no cross-workspace Synapse linked service and no control SQL connection.
+3. **Develop → Notebooks → mobility**: Bronze, Silver, Gold, health, control_plan and control_commit.
+   Their first tagged cell contains defaults; pipeline activities supply actual values. Use mobilityspark.
+4. **Data → Linked → ADLS**: landing/mobility_dev/config/pipeline_control.json is the editable source
+   configuration. Publish changes through GitHub/deploy scripts. Secrets never belong in this file.
+5. **Data → Workspace / Lake databases**: inspect mobility_dev_bronze/silver/gold/ops. In Spark:
 
 ```python
+spark.table("mobility_dev_ops.pipeline_control").show(truncate=False)
 spark.table("mobility_dev_gold.fact_trip_performance").show(truncate=False)
-spark.table("mobility_dev_ops.reconciliation").show(truncate=False)
 ```
 
-6. Open a **SQL script**, choose **Built-in** as the connection and run in `master` once:
+Two optional utility pipelines help with learning: **ConnectionCheck** tests Lookup/Copy without Spark;
+**ControlPreview** starts Spark to initialize/preview due control rows without fetching all transit feeds.
+
+6. **Integrate → MobilityMaster → Add trigger → Trigger now**: force=true loads every active source.
+   This starts billable Spark/API work. For low-cost learning, keep EveryFiveMinutes stopped and run
+   manual batches. Monitor the run before enabling any schedule.
+7. **Monitor → Pipeline runs / Activity runs / Apache Spark applications**: investigate Copy, notebook,
+   validation and freshness failures. Invalid rows go to Delta quarantine; their reasons are retained.
+8. **Develop → SQL script**, connection **Built-in**: as the configured Entra SQL admin, create a user
+   database once, select it, and run the rendered serverless views. Spark databases and this SQL user
+   database are separate namespaces; do not paste Spark SQL into the built-in editor.
 
 ```sql
-CREATE DATABASE mobility_dev_serving;
+CREATE DATABASE mobility_dev_serving; -- run once as SQL admin in master, then switch database
 ```
 
-   Then switch the script database to `mobility_dev_serving`. Execute the rendered
-   `.local/serverless_views.sql` file. This is a SQL serving database, separate from Spark's databases.
-   Query `gold.v_trip_performance`. Do not execute Spark SQL files in the built-in SQL editor.
-7. In **Monitor**, inspect Spark applications and session logs. In **ADF Studio → Monitor**, inspect
-   `MobilityMaster`, its child pipelines and notebook activity outputs. For bad records, inspect Delta
-   quarantine under the configured ADLS quarantine container or the Spark ops tables.
-8. When finished learning, stop the ADF trigger. Spark auto-pause helps only after sessions become idle;
-   five-minute scheduled workloads can keep a pool active and incur continuous charges.
+9. Connect Power BI to `<workspace>-ondemand.sql.azuresynapse.net` and the serving database. Give the
+   report identity SQL SELECT and Gold-container Blob Data Reader.
+10. End notebook sessions and stop the scheduler after learning. Spark auto-pause works only while idle.
 
-First troubleshooting checks: correct user/database/SQL connection, completed pool library installation,
-storage RBAC for the execution identity, and a complete static schedule load before Gold.
+Manual notebook execution can use your user identity. Choose **Run as managed identity** to use the
+workspace's configured storage access; your user needs Compute Operator and Credential User permissions.
+Pipeline executions use the workspace identity. Portal/Studio access does not alone grant SQL/data access.

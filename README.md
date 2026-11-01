@@ -1,44 +1,51 @@
-# Urban Mobility Reliability Analytics Platform
+# Urban Mobility Reliability Analytics — Azure Synapse
 
-An Azure Synapse project for transit reliability analytics. Azure Data Factory **dftmprojects** polls
-GTFS schedules, GTFS-Realtime and Open-Meteo weather. ADLS Gen2 **dltmmobilitydev** stores landing →
-Bronze Delta → Silver Delta → Gold Delta. **Synapse Spark** transforms the data, **Synapse serverless
-SQL** serves it, and **Power BI** presents reliability metrics.
+One Synapse workspace manages **ingestion, scheduling, orchestration, Spark transformations, control
+metadata and serverless SQL serving**. ADLS Gen2 stores data, Key Vault stores optional API credentials,
+Azure Monitor handles alerts, and Power BI reports on Gold. No standalone Azure Data Factory, Azure SQL
+control database, Databricks workspace or dedicated SQL pool is required.
 
-Start with [the Synapse Studio walkthrough](docs/synapse-quickstart.md) if Synapse is new to you.
-No Databricks workspace, CLI, Unity Catalog or access connector is required.
-
-## How the pieces fit
+Development: storage **dltmmobilitydev**, Synapse workspace **mobility-dev-syn-fxourtlytips4**, Spark pool
+**mobilityspark**. Workspace names are derived from resource group/environment by Bicep in other installations.
+Start with [the Synapse Studio walkthrough](docs/synapse-quickstart.md).
 
 ```mermaid
 flowchart LR
-  Sources[GTFS + Open-Meteo] --> ADF[ADF metadata-driven ingestion]
-  Control[(Azure SQL pipeline_control)] --> ADF
-  KV[Key Vault] -. managed identity .-> ADF
-  ADF --> Landing[(ADLS landing)]
-  ADF --> Spark[Synapse Spark notebooks]
+  Feeds[GTFS static/realtime + Open-Meteo] --> Pipelines[Synapse Pipelines: Lookup / Copy / ForEach]
+  Config[ADLS source configuration] --> Pipelines
+  Pipelines --> Control[Synapse Spark / Delta pipeline_control]
+  Control --> Pipelines
+  Pipelines --> Landing[(ADLS landing)]
+  Pipelines --> Spark[Synapse Spark notebooks]
   Landing --> Spark
   Spark --> Bronze[(Bronze Delta)]
   Bronze --> Silver[(Silver Delta)]
-  Silver --> Gold[(Gold Delta star)]
-  Silver --> Quarantine[(Quarantine Delta)]
-  Gold --> SQL[Synapse serverless SQL views]
+  Silver --> Gold[(Gold Delta)]
+  Silver --> Q[(Quarantine Delta)]
+  Gold --> SQL[Synapse built-in serverless SQL]
   SQL --> BI[Power BI]
-  ADF --> Monitor[Log Analytics + Azure Monitor]
+  KV[Key Vault] -. workspace managed identity .-> Pipelines
+  Pipelines --> Monitor[Log Analytics / Azure Monitor]
 ```
 
-| Component | Responsibility |
-|---|---|
-| Data Factory | Read metadata, fetch feeds, run notebooks, commit polling watermarks |
-| Azure SQL control database | Configuration and last successful source polling times |
-| Synapse Spark pool `mobilityspark` | Execute PySpark normalization, validation, Delta MERGE and KPIs |
-| Synapse serverless SQL | Query compatible Gold Delta files through T-SQL views; no dedicated SQL pool |
-| ADLS / Key Vault / managed identities | Storage, secret management and authentication |
-| Power BI | Reporting over the serverless SQL endpoint |
+## Why consolidate? What does it cost?
 
-## Run without Azure
+The earlier design retained ADF because the original requirements explicitly requested `dftmprojects`.
+Synapse Pipelines supports the activities this project uses, so a separate factory adds no required
+capability here. Consolidation gives one authoring/monitoring workspace; it does **not** make pipeline
+activity runs, Copy integration runtime, Spark or SQL scans free. An idle ADF resource is not a major
+fixed-cost saving. Moving the mutable control table to Delta also removes the separate Azure SQL
+Basic database's fixed charge, but adds Spark control-planning work per batch.
 
-Python 3.11 is recommended to match Synapse Spark 3.5's Python runtime.
+The largest cost risk remains frequent Spark work: a Small pool starts at three nodes. Keep the
+five-minute trigger **stopped while learning**, run manual batches, and end idle sessions.
+See [cost assumptions](docs/cost-estimate.md),
+[Synapse feature differences](https://learn.microsoft.com/en-us/azure/synapse-analytics/data-integration/concepts-data-factory-differences),
+and [Synapse pricing](https://azure.microsoft.com/en-us/pricing/details/synapse-analytics/).
+
+## Run locally without Azure
+
+Use Python 3.11 to match Synapse Spark 3.5; Python 3.12 also works for local tests.
 
 ```bash
 python3.11 -m venv .venv
@@ -52,12 +59,11 @@ SOURCE_DATE_EPOCH=946684800 python -m build --wheel
 az bicep build --file infra/main.bicep
 ```
 
-The fixture includes a duplicate position, invalid latitude, cancellation, overnight service time,
-one explicitly observed arrival and a prediction. Expected result: 19 raw envelopes, 18 valid
-deduplicated records, 1 quarantine, and 4 stop-event facts. The observed flag is a fixture extension,
-not a guarantee from standard GTFS-Realtime.
+Offline fixture: 19 raw envelopes, 18 valid deduplicated records, one invalid-latitude quarantine,
+and four stop-event facts. It includes duplicate positions, an overnight trip, a cancellation,
+one explicitly observed fixture arrival and a prediction.
 
-Optional real Spark/Delta tests (Java 17 required):
+For real local Spark/Delta tests (Java 17):
 
 ```bash
 pip install -e '.[spark]'
@@ -66,127 +72,103 @@ SPARK_LOCAL_IP=127.0.0.1 PYSPARK_PYTHON="$PWD/.venv/bin/python" python scripts/s
 
 ## Repository
 
-| Directory | Content |
+| Path | Purpose |
 |---|---|
-| `infra/` | Bicep workspace, Spark pool, storage, SQL control, Key Vault, identities, alerts |
-| `datafactory/` | Parameterized pipelines, datasets, linked services, triggers and ARM export |
-| `synapse/notebooks/` | Importable `.ipynb` notebooks with tagged parameter cells |
-| `synapse/libs/mobility/` | Shared Python/PySpark transformations and checks |
-| `synapse/tests/` | Offline tests; `scripts/spark_smoke.py` adds Delta integration |
-| `sql/control_tables/` | Azure SQL control migrations and public sample metadata |
-| `sql/serving_views/` | Serverless T-SQL views and separate Spark SQL views |
-| `architecture/`, `docs/`, `powerbi/` | Contracts, decisions, deployment/recovery, costs and report model |
+| `infra/` | Bicep for Synapse, Spark pool, ADLS, Key Vault, identities, diagnostics and alerts |
+| `synapse/pipelines/`, `datasets/`, `linkedServices/`, `triggers/` | Native Synapse orchestration artifacts |
+| `synapse/notebooks/` | Parameterized Bronze, Silver, Gold, health and control notebooks |
+| `synapse/config/pipeline_control.json` | Versioned configuration for five public example feeds |
+| `synapse/libs/mobility/` | Shared parsing, validation, Delta and control logic |
+| `synapse/tests/`, `scripts/spark_smoke.py` | Unit and distributed integration checks |
+| `sql/control_tables/` | Spark SQL contract for the Delta control table |
+| `sql/serving_views/` | Serverless T-SQL and separate Spark SQL views |
+| `docs/`, `architecture/`, `powerbi/` | Operations, contracts, decisions and reporting guidance |
 
-## Deploy in order
+## Deployment
 
-1. Create an Azure resource group and GitHub `dev` / `prod` environments. Configure Azure OIDC;
-   set **required reviewers for prod** in GitHub. See [runbook variables](docs/runbook.md).
-2. Check the storage name before deploying:
-
-```bash
-python scripts/preflight_infra.py --resource-group "$RESOURCE_GROUP"
-```
-
-   For an existing HNS-enabled account, use `--reuse-existing true` and add
-   `reuseExistingStorage=true` to the deployment below. An existing non-HNS account needs a separately
-   approved one-way upgrade; see [existing account recovery](docs/runbook.md#existing-storage-account--accountpropertycannotbeupdated).
-   Deploy infrastructure:
+1. Configure Azure OIDC and GitHub `dev`/`prod` environments; require reviewers for prod.
+2. Create a resource group and set SQL_ADMIN_OBJECT_ID/SQL_ADMIN_LOGIN to the Entra administrator group
+   for Synapse's **serverless SQL endpoint**. They are not credentials for a separate SQL server.
+3. Check storage, then deploy infrastructure:
 
 ```bash
 az login
+python scripts/preflight_infra.py --resource-group "$RESOURCE_GROUP"
 az deployment group create -g "$RESOURCE_GROUP" --template-file infra/main.bicep \
   --parameters @infra/environments/dev.parameters.json \
   --parameters sqlAdminObjectId="$SQL_ADMIN_OBJECT_ID" sqlAdminLogin="$SQL_ADMIN_LOGIN" alertEmail="$ALERT_EMAIL"
 ```
 
-   Add your fixed egress IP through `sqlAdminIps` for SQL/Synapse administration. Workspace SQL access
-   is Entra-only. There is no dedicated SQL pool or Databricks resource.
-3. As the Azure SQL Entra administrator, install `azure-identity`, `pyodbc` and ODBC Driver 18, then:
+   Existing untagged HNS accounts require reuseExistingStorage=true; project-managed HNS accounts
+   can be redeployed normally. Non-HNS adoption requires a separately approved migration. Add approved
+   administrator IPs via sqlAdminIps for Synapse Studio/API access. Use distinct names for production.
+4. Wait for infrastructure/workspace state Succeeded. Set RESOURCE_GROUP, SYNAPSE_WORKSPACE,
+   STORAGE_ACCOUNT, KEY_VAULT_URI, DATABASE_PREFIX and optionally SPARK_POOL as described in
+   [the runbook](docs/runbook.md). The deployment identity needs Synapse artifact/package permissions
+   and Blob Data Contributor on the landing container to publish configuration.
+5. Build/upload the wheel, attach requirements to the **existing** pool, and import notebooks:
 
 ```bash
-python scripts/bootstrap_sql.py --server "$SQL_SERVER"
-```
-
-   Seeds use public MBTA schedules/realtime and Boston weather. Keep all GTFS feeds under one provider
-   namespace; edit source metadata to choose another provider/city.
-4. As a Synapse Administrator, grant ADF the notebook execution roles:
-
-```bash
-export SYNAPSE_WORKSPACE ADF_PRINCIPAL_ID
-bash scripts/bootstrap_synapse.sh
-```
-
-5. Build the library, upload it to Synapse, attach it to the pool, and import notebooks:
-
-```bash
-export RESOURCE_GROUP SYNAPSE_WORKSPACE
-export SPARK_POOL=mobilityspark
 SOURCE_DATE_EPOCH=946684800 python -m build --wheel
 python scripts/deploy_synapse.py
 ```
 
-   Use a new package version for each library release and start new sessions after pool updates.
-6. Run the ADF publishing/deployment workflow. Supply Synapse endpoint/resource ID and `DATABASE_PREFIX`
-   instead of any Databricks settings. Force the first master run to load all sources. Inspect Spark
-   tables such as `mobility_dev_gold.fact_trip_performance`.
-7. In Synapse Studio's **built-in** SQL endpoint, create a user database (e.g. `mobility_dev_serving`)
-   as the Entra administrator. Render the serverless views and execute them **in that database**:
+6. Publish metadata, linked services, datasets, child/master pipelines and the stopped trigger:
+
+```bash
+python scripts/deploy_synapse_pipelines.py
+```
+
+   CI runs both publish steps in order. The trigger is left stopped intentionally. Run a manual
+   `MobilityMaster` batch with force=true, inspect Monitor and Delta reconciliation, then enable the
+   trigger in Synapse Studio only if its cost and interval are appropriate.
+7. Create a user database on the Synapse **built-in** SQL endpoint as its Entra administrator.
+   Render and execute the T-SQL serving views in that user database:
 
 ```bash
 python scripts/render_serverless_sql.py --storage dltmmobilitydev \
   --database-prefix mobility_dev --output .local/serverless_views.sql
 ```
 
-   Grant report identities SQL SELECT and Storage Blob Data Reader on the Gold container. These views
-   use Entra pass-through to ADLS; no SAS, SQL password or storage credential is embedded.
-8. Connect Power BI's Azure Synapse Analytics SQL connector to
-   `<workspace>-ondemand.sql.azuresynapse.net`, selecting the serving database. Follow [Power BI setup](powerbi/README.md).
-   Run [Azure acceptance checks](docs/test-plan.md) before operational use.
+8. Grant report identities SQL SELECT and Gold-container Blob Data Reader. Connect Power BI's Azure
+   Synapse Analytics SQL connector to `<workspace>-ondemand.sql.azuresynapse.net` and that serving database.
+   Execute [cloud acceptance checks](docs/test-plan.md) before operational use.
 
-**Resource names:** development uses `dltmmobilitydev` and reuses the required Data Factory
-`dftmprojects`. The original `dltmprojects` account was not ADLS Gen2 and is not used by this platform.
-Storage and factory names must be globally available. Production needs its own approved names/resource
-group; do not deploy production parameters into the development resource group.
+Infrastructure deployment does not execute Spark processing or publish Power BI reports. See
+[validation evidence](docs/validation-results.md) for what has actually been tested.
 
-## Delta and SQL compatibility
+## Metadata-driven ingestion
 
-Synapse Spark 3.5 includes Delta 3.2. Serverless SQL supports Delta reader protocol 1 and does not support
-features such as deletion vectors or column mapping. The library explicitly writes reader **1** / writer
-**2**, disables those features, uses classic checkpoints, and checks every Gold table's protocol after a
-build. Never enable a newer table feature on a serving table without reviewing compatibility.
+Lookup reads the versioned source JSON from `landing/<database_prefix>/config/pipeline_control.json`.
+`mobility_control_plan` MERGEs configuration into `<prefix>_ops.pipeline_control`, preserves polling
+progress, selects due sources and returns them to ForEach. Child pipelines fetch APIs using Copy and
+optional Key Vault Web activity, then run Bronze/Silver and `mobility_control_commit`. Watermarks commit
+only after Silver. Gold and health checks follow the source loop. No SQL control connection is used.
+Supported UTC schedules: every five minutes, hourly and daily at 02:00. The scheduler is serialized;
+manual replay must not run concurrently against the same prefix.
+
+## Delta compatibility and metric semantics
+
+Gold is checked for Delta reader 1/writer 2, classic checkpoints, no column mapping and no deletion
+vectors, as required by Synapse serverless SQL. Do not enable advanced features on serving tables.
 [Spark runtime](https://learn.microsoft.com/en-us/azure/synapse-analytics/spark/apache-spark-35-runtime),
-[serverless limitations](https://learn.microsoft.com/en-us/azure/synapse-analytics/sql/resources-self-help-sql-on-demand#serverless-support-delta-10-version).
+[serverless limits](https://learn.microsoft.com/en-us/azure/synapse-analytics/sql/resources-self-help-sql-on-demand#serverless-support-delta-10-version).
 
-## Metrics and boundaries
-
-Fact grain: source + trip + service date + stop sequence. UTC schedules handle GTFS times beyond 24:00.
-Cancellation requires explicit CANCELED; missing realtime data remains unknown. Standard GTFS-Realtime
-usually predicts arrivals, so actual-arrival KPIs stay null until a verified observation source is supplied.
-Prediction columns and predicted delay remain available for operational analysis. On-time means an observed
-delay from -1 to +5 minutes. Cancellation rate uses distinct reported trips, not all scheduled service.
-Weather joins the closest available grid within 100 km at scheduled UTC hour, preferring historical weather.
-Distance and vehicle count are trip-level values repeated on stop rows: do not sum them across stops.
-See [contracts](architecture/data-contracts.md) and [limitations](docs/limitations.md).
-
-## Example serverless queries
+Fact grain: source + trip + service date + stop sequence. GTFS schedules handle times beyond midnight
+and DST. Missing updates are unknown, not cancellations. Standard GTFS-Realtime predicts arrivals;
+actual-arrival KPIs stay null without a verified observation adapter. Predicted delays are separate.
+On time means observed delay in [-1,+5] minutes. Cancellation rates use distinct reported trips.
+Weather uses the closest available grid within 100 km at scheduled UTC hour, preferring archive data.
+Trip vehicle counts and distance repeat on stop rows: do not sum them across stops.
+See [contracts](architecture/data-contracts.md) and [limits](docs/limitations.md).
 
 ```sql
-SELECT TOP 20 route_short_name, weekday, [hour], average_delay_minutes, on_time_performance_pct
-FROM gold.v_route_reliability ORDER BY average_delay_minutes DESC;
+SELECT TOP 20 * FROM gold.v_route_reliability ORDER BY average_delay_minutes DESC;
 SELECT * FROM gold.v_weather_impact WHERE weather_impact_index IS NOT NULL;
 SELECT * FROM gold.v_trip_cancellation;
 ```
 
-## CI/CD and verification
+## Screenshots
 
-PR checks run Ruff, unit tests, notebook syntax/reference validation, Bicep compilation and Microsoft's
-ADF validator. `synapse-ci.yml` adds a real Spark/Delta integration test, builds the wheel, and deploys
-pool packages/notebooks through Azure CLI. ADF ARM artifacts are exported from main. Dev deploys on
-relevant merges; prod uses manual dispatch and the protected GitHub environment.
-First installation must follow the dependency order above; pause/drain ingestion during package updates.
-[Validation evidence](docs/validation-results.md) distinguishes local tests from cloud acceptance.
-
-## Screenshot placeholders
-
-After a real deployment, add screenshots under `docs/screenshots/`: successful ADF run, Synapse notebooks,
-Spark Gold tables, built-in SQL query, Power BI reliability overview and alert recovery. No fabricated images.
+Capture after real runs: Synapse Integrate pipelines, Develop notebooks, Monitor run history, Gold Delta
+and built-in SQL results, Power BI overview and alert recovery. Store under docs/screenshots/ without secrets.

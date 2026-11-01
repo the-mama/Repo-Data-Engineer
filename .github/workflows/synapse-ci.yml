@@ -1,10 +1,10 @@
 name: Synapse CI and deployment
 on:
   pull_request:
-    paths: ['synapse/**', 'pyproject.toml', 'sql/**', 'scripts/spark_smoke.py', 'scripts/deploy_synapse.py']
+    paths: ['infra/**', 'synapse/**', 'pyproject.toml', 'sql/**', 'scripts/spark_smoke.py', 'scripts/deploy_synapse.py', 'scripts/deploy_synapse_pipelines.py', 'scripts/configure_synapse.py']
   push:
     branches: [main]
-    paths: ['synapse/**', 'pyproject.toml', 'sql/**', 'scripts/spark_smoke.py', 'scripts/deploy_synapse.py', '.github/workflows/synapse-ci.yml']
+    paths: ['infra/**', 'synapse/**', 'pyproject.toml', 'sql/**', 'scripts/spark_smoke.py', 'scripts/deploy_synapse.py', 'scripts/deploy_synapse_pipelines.py', 'scripts/configure_synapse.py', '.github/workflows/synapse-ci.yml']
   workflow_dispatch:
     inputs:
       environment:
@@ -52,6 +52,14 @@ jobs:
       RESOURCE_GROUP: ${{ vars.RESOURCE_GROUP }}
       SYNAPSE_WORKSPACE: ${{ vars.SYNAPSE_WORKSPACE }}
       SPARK_POOL: mobilityspark
+      STORAGE_ACCOUNT: ${{ vars.STORAGE_ACCOUNT }}
+      TARGET: ${{ inputs.environment || 'dev' }}
+      SQL_ADMIN_OBJECT_ID: ${{ vars.SQL_ADMIN_OBJECT_ID }}
+      SQL_ADMIN_LOGIN: ${{ vars.SQL_ADMIN_LOGIN }}
+      ALERT_EMAIL: ${{ vars.ALERT_EMAIL }}
+      REUSE_EXISTING_STORAGE: ${{ vars.REUSE_EXISTING_STORAGE || 'false' }}
+      KEY_VAULT_URI: ${{ vars.KEY_VAULT_URI }}
+      DATABASE_PREFIX: ${{ vars.DATABASE_PREFIX }}
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-python@v5
@@ -63,5 +71,14 @@ jobs:
           client-id: ${{ vars.AZURE_CLIENT_ID }}
           tenant-id: ${{ vars.AZURE_TENANT_ID }}
           subscription-id: ${{ vars.AZURE_SUBSCRIPTION_ID }}
+      - run: python scripts/preflight_infra.py --resource-group "$RESOURCE_GROUP" --storage "$STORAGE_ACCOUNT" --reuse-existing "$REUSE_EXISTING_STORAGE"
+      - name: Deploy infrastructure before workspace artifacts
+        run: >-
+          az deployment group create -g "$RESOURCE_GROUP" --template-file infra/main.bicep
+          --parameters "@infra/environments/$TARGET.parameters.json"
+          --parameters storageAccountName="$STORAGE_ACCOUNT" reuseExistingStorage="$REUSE_EXISTING_STORAGE"
+          sqlAdminObjectId="$SQL_ADMIN_OBJECT_ID" sqlAdminLogin="$SQL_ADMIN_LOGIN" alertEmail="$ALERT_EMAIL"
+          --output none
       - run: SOURCE_DATE_EPOCH=946684800 python -m build --wheel
       - run: python scripts/deploy_synapse.py
+      - run: python scripts/deploy_synapse_pipelines.py

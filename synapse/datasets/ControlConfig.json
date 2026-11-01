@@ -1,0 +1,26 @@
+{
+  "name": "ControlConfig",
+  "properties": {
+    "linkedServiceName": {
+      "referenceName": "Lake",
+      "type": "LinkedServiceReference"
+    },
+    "parameters": {
+      "database_prefix": {
+        "type": "String"
+      }
+    },
+    "type": "Json",
+    "typeProperties": {
+      "location": {
+        "type": "AzureBlobFSLocation",
+        "fileSystem": "landing",
+        "folderPath": {
+          "value": "@concat(dataset().database_prefix,'/config')",
+          "type": "Expression"
+        },
+        "fileName": "pipeline_control.json"
+      }
+    }
+  }
+}

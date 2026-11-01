@@ -1,43 +1,22 @@
-# Validation evidence — Synapse migration
-
-Validated locally on 2026-11-01.
+# Unified Synapse validation — 2026-11-01
 
 | Check | Result |
 |---|---|
-| Unit tests | 24 passed, including Synapse notebook/library parameters, ADF configuration and T-SQL rendering |
-| Ruff, notebook/Python syntax, workflow YAML and ADF references | Passed |
-| Bicep compilation | Passed; Synapse workspace/pool replace Databricks resources |
-| Microsoft ADF utility v1.0.3 | Native SynapseNotebook validation passed; ARM export succeeded |
-| Wheel build | urban_mobility-0.2.0-py3-none-any.whl built |
-| Spark 3.5.3 / Delta 3.2.1 / Java 17 integration | Bronze/Silver retries, quarantine, malformed ZIP, FK quarantine, Gold MERGE/reconciliation and Spark views passed |
-| Serverless compatibility | All six Gold tables asserted reader 1/writer 2; explicit T-SQL columns matched actual Spark schemas |
-| Offline sample | 19 raw envelopes, 18 valid deduplicated rows, 1 quarantine, 4 stop-event facts |
+| Unit tests | 34 passed, including metadata scheduling, watermark dates, invalid config, notebook params and CLI failure detection |
+| Ruff / Python and notebook syntax / workflow YAML / artifact references | Passed; 12 native Synapse orchestration assets |
+| Bicep compilation | Passed; no Data Factory or separate Azure SQL control resource declarations |
+| Local Spark 3.5.3 / Delta 3.2.1 integration | Passed: control planning/commit, preserved watermarks, Bronze/Silver retries, quarantine, Gold replay/reconciliation, protocol and serverless column mappings |
+| Azure Spark pool / wheel | Pool Succeeded; mobility 0.3.0 and GTFS requirement installed; notebook import/execution succeeded |
+| Azure native artifacts | Five pipelines, three project linked services, three datasets, six notebooks, one stopped schedule |
+| Azure ConnectionCheck | Succeeded: read landing configuration and copied an Open-Meteo weather response to ADLS |
+| Azure ControlPreview | Succeeded: workspace Spark created/read Delta pipeline_control and returned five due sources to the pipeline expression |
+| Retirement | Empty dftmprojects and its project RBAC grants removed; unused Azure SQL control server/database removed |
 
-Local tests ran with Python 3.12; CI uses Python 3.11 to match Synapse's runtime. Maven artifacts were
-provided from Maven Central through DELTA_JARS on this host. The integration can also resolve them
-through delta-spark normally. These checks do not execute the serverless SQL engine.
+The selected ADLS account dltmmobilitydev has HNS enabled and all six platform containers. Synapse owns
+orchestration, Spark processing, Delta control state and serverless serving. EveryFiveMinutes is stopped
+and the development no-scheduler heartbeat is disabled to support intentional low-cost shutdown.
 
-The initial checks did not test Azure deployment. Infrastructure has since been deployed successfully
-as recorded below; notebook sessions, pool package installation, managed-identity data access,
-serverless T-SQL execution, alert delivery and Power BI connectivity remain untested.
-Follow test-plan.md for cloud acceptance before operational use.
-
-
-## Azure storage replacement
-
-On 2026-11-01 the selected development account was changed to dltmmobilitydev. Azure confirmed
-isHnsEnabled=true, Standard_LRS and provisioningState=Succeeded, with landing/bronze/silver/gold/
-quarantine/synapse containers. The legacy dltmprojects account had no active or soft-deleted containers
-or file shares, no queues/tables, and no other Resource Graph references; it was deleted with the
-user's authorization. dftmprojects was retained as the platform scheduler. Pipeline/notebook execution
-and serverless serving remain separate acceptance steps.
-
-
-## Azure infrastructure deployment
-
-The development `main` infrastructure deployment subsequently completed with state Succeeded.
-Synapse workspace and Spark pool creation were validated in Azure. Initial API validation failures
-were corrected: Spark libraries are installed after pool creation, the trusted-Azure Synapse firewall
-rule uses AllowAllWindowsAzureIps, and workspace creation explicitly waits for storage/its filesystem.
-Spark pool requirements and mobility wheel installation remain part of the separate Synapse publishing
-step; no pipeline or Spark processing session was started as part of this infrastructure check.
+No full live five-feed MobilityMaster processing batch, Gold serverless query acceptance, production
+network isolation, notification-delivery drill or Power BI publication was performed in this migration.
+See test-plan.md for those remaining operational acceptance checks. Standard GTFS-Realtime predictions
+still require a verified observation adapter before actual-arrival KPIs represent observed reliability.

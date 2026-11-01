@@ -10,10 +10,8 @@ dist/
 .env
 .local/
 infra/main.json
-datafactory/arm-template/generated/
 *.pb
 node_modules/
 spark-warehouse/
 metastore_db/
 derby.log
-datafactory/downloads/

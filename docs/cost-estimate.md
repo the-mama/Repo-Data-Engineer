@@ -15,12 +15,17 @@ Spark active all month. At 720 active hours, the same assumptions imply ~$1,037�
 | Synapse Spark, 44 hours | $63–95 |
 | Serverless SQL scans | $1–10, depending on bytes scanned/minimum query charge |
 | ADLS and transactions | $2–10 for <=50 GB |
-| Azure SQL Basic control | $5–15 |
-| ADF | $10–70 depending on activity count and Copy usage |
+| Delta control metadata | Included in ADLS/Spark; additional planning activity cost |
+| Synapse Pipelines | $10–70 depending on activity count and Copy usage |
 | Logs, alerts and Key Vault | $3–20 |
-| Total illustrative Azure allowance | $84–220 |
+| Total illustrative Azure allowance | $79–205 |
 
 Power BI licensing, tax, networking, egress and support are excluded. There is no Databricks DBU charge
 and no dedicated SQL pool. The three-node Spark floor can still be costly for tiny workloads.
-Stop the ADF trigger outside learning sessions. Track billed Spark/session time, scan costs and ADF
+Stop the Synapse trigger outside learning sessions. Track billed Spark/session time, scan costs and pipeline
 activity counts, set Azure budgets, filter serverless queries and keep retention bounded.
+
+Consolidation is primarily operational simplification, not a free-compute discount. An idle ADF factory
+does not itself account for the per-run charges; those charges move to Synapse integration. Removing
+the separate SQL control database removes that fixed tier charge, while Delta planning adds Spark
+work. Measure real sessions/activity counts before claiming net savings.

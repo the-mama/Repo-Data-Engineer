@@ -78,9 +78,17 @@ one provider's feed family. Optional carbon enrichment is intentionally outside 
 
 ## Synapse namespace and storage
 
-The ADF/notebook parameter is `database_prefix` (e.g. mobility_dev), not a Unity Catalog catalog.
+The Synapse pipeline/notebook parameter is `database_prefix` (e.g. mobility_dev), not a Unity Catalog catalog.
 Spark tables use two-part names: mobility_dev_bronze.records, mobility_dev_silver.trips,
 mobility_dev_gold.fact_trip_performance and mobility_dev_ops.reconciliation. Each database has an
 explicit ADLS LOCATION: `<container>/<database_prefix>/<layer>/<table>`. Ops uses the Gold container.
 Serverless SQL uses a separate user database and explicit OPENROWSET(FORMAT='DELTA') T-SQL views in
 schema gold. Spark SQL and serverless T-SQL are separate dialects. Gold protocol is reader 1/writer 2.
+
+## Delta control contract
+
+`<prefix>_ops.pipeline_control` has the original source/entity/API/secret-name/ingestion/watermark/
+target/schedule/active/created/modified fields, plus content_format, weather_kind, last_success_at and
+config_hash. Key: source_name + entity_name. Config JSON is the sole desired configuration; MERGE
+preserves progress, deactivates removed sources and never resets watermarks. Updates happen through
+Synapse Spark, not serverless SQL or an external transactional SQL database.
