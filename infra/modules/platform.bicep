@@ -88,15 +88,12 @@ resource sparkPool 'Microsoft.Synapse/workspaces/bigDataPools@2021-06-01' = {
     autoPause: { enabled: true, delayInMinutes: 15 }
     dynamicExecutorAllocation: { enabled: false }
     sessionLevelPackagesEnabled: true
-    libraryRequirements: {
-      filename: 'requirements.txt'
-      content: loadTextContent('../../synapse/requirements.txt')
-    }
+    // Install requirements only after pool creation via scripts/deploy_synapse.py.
   }
 }
 resource synapseTrusted 'Microsoft.Synapse/workspaces/firewallRules@2021-06-01' = {
   parent: workspace
-  name: 'AllowAzureServices'
+  name: 'AllowAllWindowsAzureIps'
   properties: { startIpAddress: '0.0.0.0', endIpAddress: '0.0.0.0' }
 }
 resource synapseAdminIps 'Microsoft.Synapse/workspaces/firewallRules@2021-06-01' = [for (ip,i) in sqlAdminIps: {

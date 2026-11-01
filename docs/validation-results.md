@@ -17,8 +17,9 @@ Local tests ran with Python 3.12; CI uses Python 3.11 to match Synapse's runtime
 provided from Maven Central through DELTA_JARS on this host. The integration can also resolve them
 through delta-spark normally. These checks do not execute the serverless SQL engine.
 
-Azure deployment, Synapse notebook sessions, pool package installation, managed-identity permissions,
-serverless T-SQL execution, alerts and Power BI connectivity were not tested against an Azure account.
+The initial checks did not test Azure deployment. Infrastructure has since been deployed successfully
+as recorded below; notebook sessions, pool package installation, managed-identity data access,
+serverless T-SQL execution, alert delivery and Power BI connectivity remain untested.
 Follow test-plan.md for cloud acceptance before operational use.
 
 
@@ -30,3 +31,13 @@ quarantine/synapse containers. The legacy dltmprojects account had no active or 
 or file shares, no queues/tables, and no other Resource Graph references; it was deleted with the
 user's authorization. dftmprojects was retained as the platform scheduler. Pipeline/notebook execution
 and serverless serving remain separate acceptance steps.
+
+
+## Azure infrastructure deployment
+
+The development `main` infrastructure deployment subsequently completed with state Succeeded.
+Synapse workspace and Spark pool creation were validated in Azure. Initial API validation failures
+were corrected: Spark libraries are installed after pool creation, the trusted-Azure Synapse firewall
+rule uses AllowAllWindowsAzureIps, and workspace creation explicitly waits for storage/its filesystem.
+Spark pool requirements and mobility wheel installation remain part of the separate Synapse publishing
+step; no pipeline or Spark processing session was started as part of this infrastructure check.
