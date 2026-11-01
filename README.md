@@ -81,7 +81,16 @@ SPARK_LOCAL_IP=127.0.0.1 PYSPARK_PYTHON="$PWD/.venv/bin/python" python scripts/s
 
 1. Create an Azure resource group and GitHub `dev` / `prod` environments. Configure Azure OIDC;
    set **required reviewers for prod** in GitHub. See [runbook variables](docs/runbook.md).
-2. Deploy infrastructure:
+2. Check the storage name before deploying:
+
+```bash
+python scripts/preflight_infra.py --resource-group "$RESOURCE_GROUP"
+```
+
+   For an existing HNS-enabled account, use `--reuse-existing true` and add
+   `reuseExistingStorage=true` to the deployment below. An existing non-HNS account needs a separately
+   approved one-way upgrade; see [existing account recovery](docs/runbook.md#existing-storage-account--accountpropertycannotbeupdated).
+   Deploy infrastructure:
 
 ```bash
 az login

@@ -26,6 +26,11 @@ jobs:
           client-id: ${{ vars.AZURE_CLIENT_ID }}
           tenant-id: ${{ vars.AZURE_TENANT_ID }}
           subscription-id: ${{ vars.AZURE_SUBSCRIPTION_ID }}
+      - name: Check existing storage without modifying it
+        env:
+          RESOURCE_GROUP: ${{ vars.RESOURCE_GROUP }}
+          REUSE_EXISTING_STORAGE: ${{ vars.REUSE_EXISTING_STORAGE || 'false' }}
+        run: python scripts/preflight_infra.py --resource-group "$RESOURCE_GROUP" --reuse-existing "$REUSE_EXISTING_STORAGE"
       - name: Deploy Bicep
         env:
           RESOURCE_GROUP: ${{ vars.RESOURCE_GROUP }}
@@ -33,8 +38,9 @@ jobs:
           SQL_ADMIN_OBJECT_ID: ${{ vars.SQL_ADMIN_OBJECT_ID }}
           SQL_ADMIN_LOGIN: ${{ vars.SQL_ADMIN_LOGIN }}
           ALERT_EMAIL: ${{ vars.ALERT_EMAIL }}
+          REUSE_EXISTING_STORAGE: ${{ vars.REUSE_EXISTING_STORAGE || 'false' }}
         run: >-
           az deployment group create -g "$RESOURCE_GROUP"
           --template-file infra/main.bicep
           --parameters "@infra/environments/$ENVIRONMENT.parameters.json"
-          --parameters sqlAdminObjectId="$SQL_ADMIN_OBJECT_ID" sqlAdminLogin="$SQL_ADMIN_LOGIN" alertEmail="$ALERT_EMAIL"
+          --parameters sqlAdminObjectId="$SQL_ADMIN_OBJECT_ID" sqlAdminLogin="$SQL_ADMIN_LOGIN" alertEmail="$ALERT_EMAIL" reuseExistingStorage="$REUSE_EXISTING_STORAGE"

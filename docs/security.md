@@ -31,3 +31,7 @@ and serverless access from that network. Avoid broad firewall bypasses in produc
 
 Pin reviewed dependencies/Actions, protect main, require PR checks and scan releases. Pause/drain ADF
 before changing pool packages. Feed licensing and attribution must be reviewed for production use.
+
+When reuseExistingStorage=true, the account's existing security, network, redundancy and retention
+settings are preserved. Audit those settings explicitly; the new-account hardening settings described
+above are not automatically applied to a reused account. A one-way HNS migration requires separate approval.

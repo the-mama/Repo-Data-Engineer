@@ -94,3 +94,28 @@ Expect log-ingestion delay and startup alerts before tables/logs exist. Test not
 an API failure, invalid record and stale feed; confirm resolution after recovery.
 Stop the ADF trigger and cancel queued runs when not developing. End notebook sessions and let the pool
 auto-pause. There is no dedicated SQL warehouse to stop; serverless SQL is billed for data processed.
+
+
+## Existing storage account / AccountPropertyCannotBeUpdated
+
+Before deployment run `python scripts/preflight_infra.py --resource-group "$RESOURCE_GROUP"`.
+If the account already exists and has hierarchical namespace enabled, use
+`--reuse-existing true` for preflight and `reuseExistingStorage=true` for Bicep. This preserves the
+account's redundancy, firewall/security settings and Blob service retention policies. Containers and
+project identity grants are still deployed. Set REUSE_EXISTING_STORAGE=true for GitHub infrastructure CI.
+
+If HNS is false/missing, do not delete the account or retry an ordinary update. Azure requires its
+separate HNS migration workflow. Start with read-only eligibility validation:
+
+```bash
+az storage account hns-migration start --type validation \
+  --name dltmprojects --resource-group "$RESOURCE_GROUP"
+```
+
+Validation can report incompatible features such as containerDeleteRetentionPolicy. Review recovery
+protection and any workloads before approving changes. Disabling soft-delete protection and the
+one-way HNS upgrade are explicit operator decisions, never automatic actions of this template or CI.
+An HNS upgrade cannot be reverted and temporarily blocks writes; coordinate a maintenance window.
+After a separately approved successful upgrade, confirm isHnsEnabled=true, restore supported protections,
+then deploy with reuseExistingStorage=true. Alternatively approve a new globally unique storage name.
+See Microsoft's [upgrade procedure](https://learn.microsoft.com/en-us/azure/storage/blobs/upgrade-to-data-lake-storage-gen2-how-to).

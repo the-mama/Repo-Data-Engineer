@@ -1,6 +1,7 @@
 param location string
 param environment string
 param storageAccountName string
+param reuseExistingStorage bool
 param dataFactoryName string
 param namePrefix string
 param sqlAdminObjectId string
@@ -15,28 +16,25 @@ resource logs 'Microsoft.OperationalInsights/workspaces@2023-09-01' = {
   tags: tags
   properties: { sku: { name: 'PerGB2018' }, retentionInDays: 30 }
 }
-resource lake 'Microsoft.Storage/storageAccounts@2023-05-01' = {
-  name: storageAccountName
-  location: location
-  tags: tags
-  sku: { name: 'Standard_LRS' }
-  kind: 'StorageV2'
-  properties: {
-    isHnsEnabled: true
-    minimumTlsVersion: 'TLS1_2'
-    supportsHttpsTrafficOnly: true
-    allowBlobPublicAccess: false
-    allowSharedKeyAccess: false
-    publicNetworkAccess: 'Enabled'
-    networkAcls: { defaultAction: 'Allow', bypass: 'AzureServices' }
+// Existing accounts must be upgraded to HNS separately after explicit operator approval.
+// Reuse never changes redundancy, account security/network settings or retention policies.
+module storageProvision './storage.bicep' = if (!reuseExistingStorage) {
+  name: 'storage-provision'
+  params: {
+    storageAccountName: storageAccountName
+    location: location
+    tags: tags
   }
 }
-resource blobs 'Microsoft.Storage/storageAccounts/blobServices@2023-05-01' = {
+resource lake 'Microsoft.Storage/storageAccounts@2023-05-01' existing = {
+  name: storageAccountName
+}
+resource blobs 'Microsoft.Storage/storageAccounts/blobServices@2023-05-01' existing = {
   parent: lake
   name: 'default'
-  properties: { deleteRetentionPolicy: { enabled: true, days: 7 } }
 }
 resource containers 'Microsoft.Storage/storageAccounts/blobServices/containers@2023-05-01' = [for layer in ['landing','bronze','silver','gold','quarantine','synapse']: {
+  dependsOn: [storageProvision]
   parent: blobs
   name: layer
   properties: { publicAccess: 'None' }

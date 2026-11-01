@@ -3,6 +3,8 @@ targetScope = 'resourceGroup'
 param environment string = 'dev'
 param location string = resourceGroup().location
 param storageAccountName string = 'dltmprojects'
+@description('Reuse an existing HNS-enabled account in this resource group without changing its settings. Upgrade existing non-HNS accounts separately with explicit approval.')
+param reuseExistingStorage bool = false
 param dataFactoryName string = 'dftmprojects'
 param namePrefix string = 'mobility-${environment}'
 @description('Entra group object ID for Azure SQL administrators; supplied by deployment, never committed.')
@@ -19,6 +21,7 @@ module platform './modules/platform.bicep' = {
     location: location
     environment: environment
     storageAccountName: storageAccountName
+    reuseExistingStorage: reuseExistingStorage
     dataFactoryName: dataFactoryName
     namePrefix: namePrefix
     sqlAdminObjectId: sqlAdminObjectId
