@@ -17,7 +17,7 @@ def render(destination):
         ],
         "mobilityspark": os.environ.get("SPARK_POOL", "mobilityspark"),
         "mobility_dev": os.environ["DATABASE_PREFIX"],
-        "dltmprojects": os.environ["STORAGE_ACCOUNT"],
+        "dltmmobilitydev": os.environ["STORAGE_ACCOUNT"],
     }
     for folder in ("pipelines", "datasets", "linkedServices", "triggers"):
         for path in Path("datafactory", folder).glob("*.json"):
@@ -59,7 +59,7 @@ if __name__ == "__main__":
     args = parser.parse_args()
     if args.validation:
         defaults = {
-            "STORAGE_ACCOUNT": "dltmprojects",
+            "STORAGE_ACCOUNT": "dltmmobilitydev",
             "KEY_VAULT_URI": "https://configure.vault.azure.net/",
             "SQL_SERVER": "configure.database.windows.net",
             "SYNAPSE_ENDPOINT": "https://configure.dev.azuresynapse.net",

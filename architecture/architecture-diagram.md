@@ -5,7 +5,7 @@ flowchart TB
   Feeds[GTFS static/realtime + Open-Meteo] --> ADF[ADF dftmprojects]
   Control[(Azure SQL pipeline_control)] --> ADF
   KV[Key Vault] -. ADF managed identity .-> ADF
-  ADF --> Landing[(dltmprojects / landing)]
+  ADF --> Landing[(dltmmobilitydev / landing)]
   ADF --> NB[Synapse notebooks / mobilityspark]
   Landing --> NB
   NB --> Bronze[(Bronze Delta)]

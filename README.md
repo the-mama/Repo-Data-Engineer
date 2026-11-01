@@ -1,7 +1,7 @@
 # Urban Mobility Reliability Analytics Platform
 
 An Azure Synapse project for transit reliability analytics. Azure Data Factory **dftmprojects** polls
-GTFS schedules, GTFS-Realtime and Open-Meteo weather. ADLS Gen2 **dltmprojects** stores landing →
+GTFS schedules, GTFS-Realtime and Open-Meteo weather. ADLS Gen2 **dltmmobilitydev** stores landing →
 Bronze Delta → Silver Delta → Gold Delta. **Synapse Spark** transforms the data, **Synapse serverless
 SQL** serves it, and **Power BI** presents reliability metrics.
 
@@ -133,7 +133,7 @@ python scripts/deploy_synapse.py
    as the Entra administrator. Render the serverless views and execute them **in that database**:
 
 ```bash
-python scripts/render_serverless_sql.py --storage dltmprojects \
+python scripts/render_serverless_sql.py --storage dltmmobilitydev \
   --database-prefix mobility_dev --output .local/serverless_views.sql
 ```
 
@@ -143,9 +143,10 @@ python scripts/render_serverless_sql.py --storage dltmprojects \
    `<workspace>-ondemand.sql.azuresynapse.net`, selecting the serving database. Follow [Power BI setup](powerbi/README.md).
    Run [Azure acceptance checks](docs/test-plan.md) before operational use.
 
-**Exact-name constraint:** `dltmprojects` is globally unique. Dev and prod parameter files are alternative
-installations, not two simultaneously deployable lakes with the same name. Use one environment at a time
-or approve different names for isolation. Do not point a prod deployment at dev's resource group.
+**Resource names:** development uses `dltmmobilitydev` and reuses the required Data Factory
+`dftmprojects`. The original `dltmprojects` account was not ADLS Gen2 and is not used by this platform.
+Storage and factory names must be globally available. Production needs its own approved names/resource
+group; do not deploy production parameters into the development resource group.
 
 ## Delta and SQL compatibility
 

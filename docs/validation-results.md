@@ -20,3 +20,13 @@ through delta-spark normally. These checks do not execute the serverless SQL eng
 Azure deployment, Synapse notebook sessions, pool package installation, managed-identity permissions,
 serverless T-SQL execution, alerts and Power BI connectivity were not tested against an Azure account.
 Follow test-plan.md for cloud acceptance before operational use.
+
+
+## Azure storage replacement
+
+On 2026-11-01 the selected development account was changed to dltmmobilitydev. Azure confirmed
+isHnsEnabled=true, Standard_LRS and provisioningState=Succeeded, with landing/bronze/silver/gold/
+quarantine/synapse containers. The legacy dltmprojects account had no active or soft-deleted containers
+or file shares, no queues/tables, and no other Resource Graph references; it was deleted with the
+user's authorization. dftmprojects was retained as the platform scheduler. Pipeline/notebook execution
+and serverless serving remain separate acceptance steps.

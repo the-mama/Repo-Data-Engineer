@@ -47,13 +47,14 @@ resource factory 'Microsoft.DataFactory/factories@2018-06-01' = {
   properties: { publicNetworkAccess: 'Enabled' }
 }
 resource workspace 'Microsoft.Synapse/workspaces@2021-06-01' = {
+  dependsOn: [storageProvision, containers[5]]
   name: '${namePrefix}-syn-${suffix}'
   location: location
   tags: tags
   identity: { type: 'SystemAssigned' }
   properties: {
     defaultDataLakeStorage: {
-      accountUrl: lake.properties.primaryEndpoints.dfs
+      accountUrl: 'https://${storageAccountName}.dfs.${az.environment().suffixes.storage}'
       filesystem: containers[5].name
       resourceId: lake.id
       createManagedPrivateEndpoint: false

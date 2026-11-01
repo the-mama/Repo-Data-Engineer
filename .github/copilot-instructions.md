@@ -1,7 +1,7 @@
 # Repository instructions
 
 Use Python/PySpark and SQL, modular Bicep, and parameterized ADF JSON. Preserve required resource
-names dftmprojects and dltmprojects. Never commit credentials, API tokens, PATs, subscription IDs or
+names dftmprojects and dltmmobilitydev. Never commit credentials, API tokens, PATs, subscription IDs or
 connection strings. Supply nonsecret deployment IDs through GitHub environment variables and secrets
 through Key Vault; prefer managed identity and Azure OIDC.
 

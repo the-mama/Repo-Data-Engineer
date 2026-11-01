@@ -6,7 +6,7 @@
       "value": "dev"
     },
     "storageAccountName": {
-      "value": "dltmprojects"
+      "value": "dltmmobilitydev"
     },
     "dataFactoryName": {
       "value": "dftmprojects"

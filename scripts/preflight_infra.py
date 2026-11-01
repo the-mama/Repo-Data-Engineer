@@ -19,7 +19,8 @@ def check(resource_group, account, reuse_existing):
                 "Stop: an ordinary Bicep update cannot enable it. Validate a separately approved "
                 "HNS migration, or choose an approved new account name. Do not delete the account."
             )
-        if not reuse_existing:
+        managed = existing.get("tags", {}).get("mobility-storage-managed") == "true"
+        if not reuse_existing and not managed:
             raise SystemExit(
                 f"{account} already exists. Set reuseExistingStorage=true to preserve its "
                 "redundancy, network/security settings and retention policies."
@@ -40,7 +41,7 @@ def check(resource_group, account, reuse_existing):
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
     parser.add_argument("--resource-group", required=True)
-    parser.add_argument("--storage", default="dltmprojects")
+    parser.add_argument("--storage", default="dltmmobilitydev")
     parser.add_argument("--reuse-existing", choices=["true", "false"], default="false")
     args = parser.parse_args()
     check(args.resource_group, args.storage, args.reuse_existing == "true")

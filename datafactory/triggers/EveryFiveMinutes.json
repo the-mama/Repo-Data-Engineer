@@ -18,7 +18,7 @@
         },
         "parameters": {
           "database_prefix": "mobility_dev",
-          "storage": "dltmprojects"
+          "storage": "dltmmobilitydev"
         }
       }
     ]

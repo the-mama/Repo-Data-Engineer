@@ -14,7 +14,7 @@
       },
       "storage": {
         "type": "String",
-        "defaultValue": "dltmprojects"
+        "defaultValue": "dltmmobilitydev"
       }
     },
     "variables": {

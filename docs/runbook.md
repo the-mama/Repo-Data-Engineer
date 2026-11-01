@@ -109,7 +109,7 @@ separate HNS migration workflow. Start with read-only eligibility validation:
 
 ```bash
 az storage account hns-migration start --type validation \
-  --name dltmprojects --resource-group "$RESOURCE_GROUP"
+  --name dltmmobilitydev --resource-group "$RESOURCE_GROUP"
 ```
 
 Validation can report incompatible features such as containerDeleteRetentionPolicy. Review recovery
@@ -119,3 +119,11 @@ An HNS upgrade cannot be reverted and temporarily blocks writes; coordinate a ma
 After a separately approved successful upgrade, confirm isHnsEnabled=true, restore supported protections,
 then deploy with reuseExistingStorage=true. Alternatively approve a new globally unique storage name.
 See Microsoft's [upgrade procedure](https://learn.microsoft.com/en-us/azure/storage/blobs/upgrade-to-data-lake-storage-gen2-how-to).
+
+
+## Selected development resources
+
+The approved replacement ADLS Gen2 account is `dltmmobilitydev`; `dftmprojects` is retained because it
+is the platform scheduler. The legacy non-HNS account `dltmprojects` is not a platform dependency.
+Accounts created by infra/modules/storage.bicep carry mobility-storage-managed=true; preflight permits
+normal managed-account redeploys. Untagged existing accounts still require explicit reuse mode and HNS.

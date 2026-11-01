@@ -18,7 +18,7 @@ def render(storage, database_prefix):
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
-    parser.add_argument("--storage", default="dltmprojects")
+    parser.add_argument("--storage", default="dltmmobilitydev")
     parser.add_argument("--database-prefix", default="mobility_dev")
     parser.add_argument("--output", type=Path, required=True)
     args = parser.parse_args()

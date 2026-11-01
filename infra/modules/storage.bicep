@@ -5,7 +5,7 @@ param tags object
 resource lake 'Microsoft.Storage/storageAccounts@2023-05-01' = {
   name: storageAccountName
   location: location
-  tags: tags
+  tags: union(tags, { 'mobility-storage-managed': 'true' })
   sku: { name: 'Standard_LRS' }
   kind: 'StorageV2'
   properties: {

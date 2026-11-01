@@ -22,7 +22,7 @@ jobs:
     env:
       RESOURCE_GROUP: ${{ vars.RESOURCE_GROUP }}
       FACTORY_NAME: dftmprojects
-      STORAGE_ACCOUNT: dltmprojects
+      STORAGE_ACCOUNT: dltmmobilitydev
       KEY_VAULT_URI: ${{ vars.KEY_VAULT_URI }}
       SQL_SERVER: ${{ vars.SQL_SERVER }}
       SYNAPSE_ENDPOINT: ${{ vars.SYNAPSE_ENDPOINT }}

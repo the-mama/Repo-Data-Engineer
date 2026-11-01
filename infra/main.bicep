@@ -2,7 +2,7 @@ targetScope = 'resourceGroup'
 @allowed(['dev', 'prod'])
 param environment string = 'dev'
 param location string = resourceGroup().location
-param storageAccountName string = 'dltmprojects'
+param storageAccountName string = 'dltmmobilitydev'
 @description('Reuse an existing HNS-enabled account in this resource group without changing its settings. Upgrade existing non-HNS accounts separately with explicit approval.')
 param reuseExistingStorage bool = false
 param dataFactoryName string = 'dftmprojects'
